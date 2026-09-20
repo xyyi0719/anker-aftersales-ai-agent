@@ -38,3 +38,11 @@
 ## 部署边界
 
 仅通过 GitHub Actions 部署，不使用用户没有权限的服务器交互。新增服务采用 `anker-demo-api` 网络别名，避免覆盖旧 `mock-apis`。本地没有 Docker CLI，容器构建和网络检查交由 Actions 执行。线上 Dify 是否已导入新 YAML、模型是否可用、HTTP 节点是否受代理策略限制，均须在 Dify 平台测试。
+
+## 2026-09-21 推送状态
+
+- 实现提交：`e62a36f`。工作区测试与 ZIP 检查完成。
+- ZIP 校验：80 个文件的 SHA256 与 MANIFEST 一致，压缩包完整性通过；不包含 .env、虚拟环境、工单数据库或真实密钥。
+- 首次推送被 GitHub 拒绝，原因是当前 OAuth 登录缺少修改 `.github/workflows/deploy-frontend.yml` 所需的 `workflow` scope。远端尚未收到实现提交，因此新部署尚未触发。
+- 已发起 `gh auth refresh -h github.com -s workflow`，等待账号持有人完成 GitHub 设备授权。完成授权后继续推送并检查 Actions。
+- Dify 应用 Secret 已配置成功，服务器原有三个 Secret 名称已确认存在；未读取或输出服务器凭据。
