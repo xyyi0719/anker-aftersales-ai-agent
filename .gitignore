@@ -54,3 +54,14 @@ retrieval/data/
 .DS_Store
 Thumbs.db
 *.log
+
+# ============================================================
+# 本地部署脚本（用户环境特定）
+# ============================================================
+push_workbench_only.py
+push_mock_apis_fix.py
+scp_to_server.py
+ssh_helper.py
+
+# 竞品参考图（不入 git）
+otherproject.jpg

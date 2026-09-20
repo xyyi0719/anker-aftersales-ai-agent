@@ -37,7 +37,12 @@ export default function SidePanel({ routing, tasks, retrievals, emotions, state,
         <section className="panel-section">
           <SectionHeader icon="📈" title="情绪曲线" count={emotions.length} />
           <div className="panel-section-body">
-            <EmotionChart emotions={emotions} current={state.emotionLevel} />
+            <EmotionChart
+              emotions={emotions}
+              current={state.emotionLevel}
+              history={state.emotionHistory}
+              consecutiveAngry={state.consecutiveAngry}
+            />
           </div>
         </section>
       </div>

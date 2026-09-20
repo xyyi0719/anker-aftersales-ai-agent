@@ -1,0 +1,111 @@
+# 安抚话术库 - empathy_responses.yaml
+# 设计目的: 在业务处理之前先安抚用户，是「情绪防线」的语料池
+# 使用方式: handlers 根据 emotion_level 选最贴近的一段作开场
+
+version: 1.0
+
+# 四级情绪安抚模板
+emotion_levels:
+  angry:
+    name: 暴怒
+    keywords: 气死/太过分/忍无可忍/气炸/怒/投诉/无良/骗子/垃圾/受不了/救命/愤怒/差评/再也不买
+    # 三类场景的话术池 - handlers 按业务类型选
+    responses:
+      # 排障类（troubleshoot_handler）
+      troubleshoot:
+        - "非常抱歉给您带来这样的体验，{{product}} 出问题确实不该。让我马上帮您排查，优先给您处理。"
+        - "看到您这么着急我也很理解，{{symptom}} 这种问题我们处理过很多次，您放心，我来帮您搞定。"
+        - "您先别急，{{product}} 这类故障我们有快速通道，我直接带您走，不用走常规流程。"
+      # 政策咨询类（inquiry_handler）
+      inquiry:
+        - "您专门来问 {{topic}}，肯定是有重要的事耽搁了。我先把核心政策给您说清楚。"
+        - "抱歉让您久等了，{{topic}} 我直接帮您查清楚，您不用自己去翻条款。"
+      # 退换类（return_handler）
+      return:
+        - "非常理解您的着急，{{product}} 退换本来就该爽快。我现在直接帮您走流程。"
+        - "您别担心，{{order_id}} 这单我马上给您安排，您只要确认收货情况就行。"
+      # 转人工（transfer_handler）
+      transfer:
+        - "您说的情况我完全理解，{{product}} 的事交给专员跟进更稳妥。我马上帮您转。"
+      # 投诉升级（complaint_handler）
+      complaint:
+        - "您反映的情况我们都收到了，已经在升级处理了。1 小时内会有专员主动致电您。"
+      # 兜底（oos_handler）
+      oos:
+        - "您的心情我能理解，虽然这次没能帮上忙，但您反映的情况我们会记录下来改进。"
+
+  upset:
+    name: 不满
+    keywords: 唉/失望/没想到/有点烦/怎么这样/不太满意/不应该/烦/郁闷/糟心/恼火/焦虑/烦躁/崩溃/无助/糟糕
+    responses:
+      troubleshoot:
+        - "我能理解您的不便，{{product}} 这种情况确实让人不痛快。让我一步步帮您看下。"
+        - "您说的我能体会，{{symptom}} 确实影响使用。我们一起把问题找到。"
+      inquiry:
+        - "您别着急，{{topic}} 我帮您说清楚，看完您就明白了。"
+      return:
+        - "您说的我能理解，咱们一步一步把退换办妥。"
+      transfer:
+        - "我先帮您转到专员那边，让更熟悉您情况的人来处理。"
+      complaint:
+        - "您的反馈我都看到了，会第一时间跟进。"
+      oos:
+        - "虽然这次没能直接帮上您，但您的反馈对我们很重要。"
+
+  complaint:
+    name: 投诉风险
+    keywords: 315/工商/消协/起诉/法院/律师/媒体/曝光/微博/黑猫/12315/维权/打官司/媒体
+    # 投诉类不区分业务场景，统一高优先级
+    responses:
+      transfer:
+        - "您反映的情况我们已经收到并立即升级处理。1 小时内会有专员主动致电您，优先解决您的问题。"
+        - "您说的我们都记下来了，已经在走内部升级流程。专员会第一时间联系您，确保您的问题得到妥善处理。"
+
+  normal:
+    name: 平静
+    keywords: []
+    # 平静时无需安抚，直接进业务
+    responses:
+      troubleshoot: [""]
+      inquiry: [""]
+      return: [""]
+      transfer: [""]
+      complaint: [""]
+      oos: [""]
+
+# 多轮安抚规则 - 同一会话连续 angry 时升级话术强度
+multi_turn_rules:
+  - condition: "连续 angry >= 2 次"
+    action: "切换到更强语气：'我们已经把您的情况列入紧急处理，专员会优先跟进'"
+  - condition: "angry 后情绪回到 upset"
+    action: "轻量安抚：'谢谢您愿意继续沟通，咱们一起把问题解决'"
+  - condition: "用户主动表示接受方案"
+    action: "完全切换到 normal，不再触发安抚"
+
+# 红线（绝对不能出现的话术）
+red_lines:
+  - "非常抱歉给您带来不便"   # 机械道歉，最多用 1 次
+  - "我代表公司向您道歉"
+  - "请您消消气"
+  - "请理解我们的难处"
+  - "我们会尽快处理（无具体时间）"
+  - "这是正常现象"
+
+# 安抚力度档位（给前端 StatusCards 显示用）
+intensity_levels:
+  - level: L1_mild
+    description: 轻度安抚（upset 场景）
+    example: "我能理解您的不便..."
+    trigger: emotion in [upset]
+  - level: L2_strong
+    description: 强安抚（angry 场景）
+    example: "我完全理解您的心情..."
+    trigger: emotion in [angry]
+  - level: L3_priority
+    description: 优先通道（complaint 场景）
+    example: "1 小时内会有专员主动致电您"
+    trigger: emotion in [complaint]
+  - level: L0_none
+    description: 不触发安抚
+    example: ""
+    trigger: emotion in [normal]

@@ -155,6 +155,32 @@ export function useEventParser({ events, initialQuery, initialAttachments }: Use
                 status: 'success',
               });
             }
+            // H4-完整: 解析 emotion_intensity / emotion_history / consecutive_angry
+            // 顺序重要：必须在 emotionLevel 更新后，因为 emotionIntensity 需要 emotionLevel 计算
+            if (parsed.emotion_intensity) {
+              state.emotionIntensity = parsed.emotion_intensity;
+            } else if (parsed.emotion) {
+              // fallback: 根据 emotion_level 推算 intensity
+              state.emotionIntensity =
+                parsed.emotion === 'complaint' ? 'L3_priority' :
+                parsed.emotion === 'angry' || parsed.emotion === 'angry_escalated' ? 'L2_strong' :
+                parsed.emotion === 'upset' ? 'L1_mild' :
+                'L0_none';
+            }
+            if (parsed.emotion_trigger) state.emotionTrigger = parsed.emotion_trigger;
+            if (typeof parsed.consecutive_angry === 'number') state.consecutiveAngry = parsed.consecutive_angry;
+            if (parsed.emotion_history) {
+              try {
+                const hist = typeof parsed.emotion_history === 'string'
+                  ? JSON.parse(parsed.emotion_history)
+                  : parsed.emotion_history;
+                if (Array.isArray(hist)) state.emotionHistory = hist;
+              } catch {}
+            }
+            // 标记安抚已触发
+            if (state.emotionIntensity && state.emotionIntensity !== 'L0_none') {
+              state.empathyApplied = true;
+            }
             // product（V3 用 'product' key，V2 用 'product_model' key，兼容两者）
             const productVal = parsed.product || parsed.product_model;
             if (productVal) state.productModel = productVal;

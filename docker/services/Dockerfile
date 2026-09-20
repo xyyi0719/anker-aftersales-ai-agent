@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 # Copy both services into one image; CMD chooses which to run.
 COPY mock_apis/  /app/mock_apis/
 COPY retrieval/  /app/retrieval/
+COPY 素材库/ /app/素材库/
 
 # 健康检查脚本（不需要容引号）
 COPY docker/services/healthcheck.py /app/healthcheck.py

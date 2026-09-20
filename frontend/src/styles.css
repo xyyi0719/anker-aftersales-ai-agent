@@ -843,3 +843,212 @@ body {
   0%, 50% { opacity: 1; }
   51%, 100% { opacity: 0; }
 }
+/* ============================================================
+ * ProductDisambigCard 产品消歧卡片
+ * ============================================================ */
+.product-disambig {
+  margin: 12px 0;
+  padding: 14px;
+  background: linear-gradient(135deg, #fff5f0 0%, #ffe8d6 100%);
+  border: 1.5px solid #ffb866;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(255, 153, 51, 0.15);
+}
+
+.product-disambig-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #663300;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.product-disambig-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.product-card {
+  position: relative;
+  background: #ffffff;
+  border: 2px solid #ffd9a8;
+  border-radius: 10px;
+  padding: 14px 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+  font-family: inherit;
+  color: #333;
+}
+
+.product-card:hover:not(:disabled) {
+  border-color: #ff8c1a;
+  background: #fff8f0;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 140, 26, 0.25);
+}
+
+.product-card:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.product-card.selected {
+  border-color: #ff8c1a;
+  background: #fff0d9;
+  box-shadow: 0 0 0 3px rgba(255, 140, 26, 0.2);
+}
+
+.product-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.product-card-emoji {
+  font-size: 36px;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.product-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.product-card-desc {
+  font-size: 11px;
+  color: #777;
+  line-height: 1.4;
+}
+
+.product-card-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: #ff8c1a;
+  color: white;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.product-disambig-hint {
+  font-size: 11px;
+  color: #996633;
+  margin-top: 4px;
+  text-align: center;
+  font-style: italic;
+}
+
+/* ===== H4-完整: 情绪安抚强度可视化 ===== */
+
+.empathy-intensity {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.empathy-L0_none {
+  background: transparent;
+  color: var(--color-text-muted, #888);
+}
+
+.empathy-L1_mild {
+  background: rgba(255, 158, 0, 0.15);
+  color: #ff9e00;
+  border: 1px solid rgba(255, 158, 0, 0.3);
+}
+
+.empathy-L2_strong {
+  background: rgba(255, 71, 87, 0.15);
+  color: #ff4757;
+  border: 1px solid rgba(255, 71, 87, 0.3);
+}
+
+.empathy-L3_priority {
+  background: rgba(220, 38, 38, 0.2);
+  color: #dc2626;
+  border: 1px solid rgba(220, 38, 38, 0.5);
+  animation: empathy-pulse 1.5s infinite;
+}
+
+.empathy-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  background: #dc2626;
+  color: white;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+@keyframes empathy-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ===== H4-完整: 情绪历史轨迹 ===== */
+
+.emotion-history {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border, #2d3548);
+}
+
+.emotion-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.emotion-history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.emotion-history-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.emotion-history-level {
+  font-weight: 600;
+  color: var(--color-text, #fff);
+  min-width: 50px;
+}
+
+.emotion-history-trigger {
+  color: var(--color-text-dim, #888);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emotion-normal .emotion-history-level { color: #00c896; }
+.emotion-upset .emotion-history-level { color: #ff9e00; }
+.emotion-angry .emotion-history-level { color: #ff4757; }
+.emotion-angry_escalated .emotion-history-level { color: #dc2626; }
+.emotion-complaint .emotion-history-level { color: #ff1493; }

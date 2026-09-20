@@ -40,7 +40,7 @@ export default function App() {
   ];
 
   const handleSend = (text: string, files?: Array<{ type: string; url: string }>) => {
-    send({ query: text, files });
+    send({ query: text, files: files && files.length > 0 ? files : undefined });
   };
 
   return (

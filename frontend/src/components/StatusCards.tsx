@@ -47,6 +47,7 @@ const EMOTION_LABEL: Record<string, string> = {
   neutral: '平静',
   upset: '不满',
   angry: '暴怒',
+  angry_escalated: '暴怒🔥升级',
   complaint: '投诉风险',
   // handler 可能输出的变体
   calm: '平静',
@@ -63,6 +64,7 @@ const EMOTION_COLOR: Record<string, string> = {
   neutral: 'var(--color-success)',
   upset: 'var(--color-warning)',
   angry: 'var(--color-danger)',
+  angry_escalated: 'var(--color-danger)',
   complaint: 'var(--color-danger)',
   calm: 'var(--color-success)',
   happy: 'var(--color-success)',
@@ -71,6 +73,21 @@ const EMOTION_COLOR: Record<string, string> = {
   furious: 'var(--color-danger)',
   rage: 'var(--color-danger)',
   threatening: 'var(--color-danger)',
+};
+
+// 安抚强度档位映射（来自 emotion_node.emotion_intensity）
+const INTENSITY_LABEL: Record<string, string> = {
+  L0_none: '不触发',
+  L1_mild: '轻度安抚',
+  L2_strong: '强安抚',
+  L3_priority: '优先通道',
+};
+
+const INTENSITY_COLOR: Record<string, string> = {
+  L0_none: 'var(--color-text-muted)',
+  L1_mild: 'var(--color-warning)',
+  L2_strong: 'var(--color-danger)',
+  L3_priority: '#dc2626',
 };
 
 export default function StatusCards({ state, isStreaming }: Props) {
@@ -116,7 +133,12 @@ export default function StatusCards({ state, isStreaming }: Props) {
         icon="💢"
         label="情绪"
         value={state.emotionLevel ? EMOTION_LABEL[state.emotionLevel] || state.emotionLevel : '—'}
-        sub={safety ? '⚠️ 危险' : ''}
+        sub={
+          state.emotionIntensity && state.emotionIntensity !== 'L0_none'
+            ? `🤗 ${INTENSITY_LABEL[state.emotionIntensity] || state.emotionIntensity}` +
+              (state.consecutiveAngry && state.consecutiveAngry >= 2 ? ` ×${state.consecutiveAngry}` : '')
+            : safety ? '⚠️ 危险' : ''
+        }
         color={state.emotionLevel ? EMOTION_COLOR[state.emotionLevel] : undefined}
         active={!!state.emotionLevel}
         pulse={pulseEmotion}

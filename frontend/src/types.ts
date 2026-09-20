@@ -47,7 +47,12 @@ export interface ChatMessage {
 
 export interface TroubleshootingState {
   intent?: string;
-  emotionLevel?: 'normal' | 'upset' | 'angry' | 'complaint';
+  emotionLevel?: 'normal' | 'upset' | 'angry' | 'angry_escalated' | 'complaint';
+  emotionIntensity?: 'L0_none' | 'L1_mild' | 'L2_strong' | 'L3_priority';
+  emotionTrigger?: string;
+  emotionHistory?: Array<{ level: string; trigger: string; query: string }>;
+  consecutiveAngry?: number;
+  empathyApplied?: boolean;
   productModel?: string;
   productCategory?: string;
   currentNode?: string;

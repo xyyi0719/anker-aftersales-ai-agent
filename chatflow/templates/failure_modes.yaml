@@ -1,0 +1,327 @@
+# ============================================================
+# Anker 售后 AI - 故障模式库 (failure_modes.yaml)
+# ============================================================
+# 用途:
+#   - vision_extract LLM 必须从此词表选 failure_code（不允许 free-form）
+#   - troubleshoot_handler 根据 failure_code 索引故障树
+#   - 测试用例统一 symptomcode 锚点（不依赖 LLM 自由发挥）
+#
+# 设计参考: 行业 4.3 节（故障模式库 + 否定不算命中 + 视觉签名映射）
+#
+# 维护:
+#   - 新增症状: 在对应类别下追加，并在 categories 末尾登记
+#   - 修改 keywords: 保持关键词为口语常见说法（避免过于专业的技术词）
+#   - 同步更新: vision_extract prompt + troubleshoot_handler prompt + smoke fixtures
+# ============================================================
+
+version: "1.0"
+last_updated: "2026-09-20"
+
+# 否定词 / 修饰词（用于过滤 false positive）
+negation_keywords: [没, 不, 不是, 并非, 未, 无, 不算, 否定]
+
+# 受控症状分类（categories list 也用于 LLM 输出约束）
+categories:
+  # ============================================================
+  # 1. 安全警告类 (P0 立即升级)
+  # ============================================================
+  - code: safety_hazard_bulge
+    label: 鼓包（锂电池膨胀）
+    category_group: safety_hazard
+    keywords: [鼓包, 鼓起, 凸起, 膨胀, 变形, 撑开, 涨起来]
+    escalation: P0_立即停止使用
+    applicable_products: [power_bank, charger]
+    trigger_handler_action: IMMEDIATE_STOP_AND_ESCALATE
+    chip_keywords: [鼓包]
+    safety_warning: "⚠️ 鼓包的锂电池存在起火、漏液甚至爆炸风险，请立即停止使用！"
+
+  - code: safety_hazard_leak
+    label: 漏液
+    category_group: safety_hazard
+    keywords: [漏液, 渗液, 流液, 漏油, 液体渗出]
+    escalation: P0_立即停止使用
+    applicable_products: [power_bank, battery]
+    trigger_handler_action: IMMEDIATE_STOP_AND_ESCALATE
+    safety_warning: "⚠️ 漏液电池存在化学灼伤风险，请立即停止使用！"
+
+  - code: safety_hazard_fire
+    label: 起火 / 冒烟 / 烧焦
+    category_group: safety_hazard
+    keywords: [起火, 着火, 燃烧, 冒烟, 冒白烟, 烧焦, 焦味, 焦黑, 焦味, 烧灼]
+    escalation: P0_立即停止使用
+    applicable_products: [all]
+    trigger_handler_action: IMMEDIATE_STOP_AND_ESCALATE
+    safety_warning: "⚠️ 检测到起火/冒烟/焦味，请立即远离并联系 119！"
+
+  - code: safety_hazard_hot
+    label: 异常发热 / 烫手
+    category_group: safety_hazard
+    keywords: [烫手, 发烫严重, 过热, 异常发热, 烫伤]
+    escalation: P0_立即停止使用
+    applicable_products: [charger, power_bank, cable]
+    trigger_handler_action: IMMEDIATE_STOP_AND_ESCALATE
+    safety_warning: "⚠️ 异常发热可能预示电池故障，请立即停止使用！"
+
+  # ============================================================
+  # 2. 充电故障
+  # ============================================================
+  - code: charge_cannot_in
+    label: 充不进电
+    category_group: charge_failure
+    keywords: [充不进电, 充不进去, 无法充电, 不能充电, 充不上, 不识别充电]
+    applicable_products: [power_bank, charger, earphone, breast_pump, vacuum]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  - code: charge_slow
+    label: 充电慢
+    category_group: charge_failure
+    keywords: [充电慢, 充得很慢, 充电速度慢, 几个小时, 充不满]
+    applicable_products: [power_bank, charger, earphone, breast_pump]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  - code: charge_intermittent
+    label: 充电时断时续
+    category_group: charge_failure
+    keywords: [接触不良, 时断时续, 充一下断一下, 接触不稳, 摇晃才能充]
+    applicable_products: [power_bank, charger, cable]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  - code: charge_abnormal_indicator
+    label: 充电指示灯异常
+    category_group: charge_failure
+    keywords: [灯不亮, 灯闪烁, 指示灯异常, 不闪, 灯全不亮, 充电灯]
+    applicable_products: [power_bank, charger, earphone]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  # ============================================================
+  # 3. 电源故障
+  # ============================================================
+  - code: power_cannot_boot
+    label: 无法开机
+    category_group: power_failure
+    keywords: [无法开机, 开不了机, 按了没反应, 开机没反应, 不开机]
+    applicable_products: [power_bank, charger, earphone, breast_pump, vacuum]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  - code: power_auto_off
+    label: 自动断电 / 突然关机
+    category_group: power_failure
+    keywords: [自动关机, 突然断电, 自动断电, 一用就关机, 突然没电]
+    applicable_products: [power_bank, earphone, breast_pump, vacuum]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  - code: power_no_output
+    label: 无输出（无法放电）
+    category_group: power_failure
+    keywords: [不输出, 不能放电, 给手机充不进, 不能给手机充, 输出电流]
+    applicable_products: [power_bank]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  - code: power_dead_battery
+    label: 电池耗尽 / 完全无电
+    category_group: power_failure
+    keywords: [完全没电, 彻底没电, 充不进电也开不了, 完全无电, 0%]
+    applicable_products: [power_bank, earphone, breast_pump, vacuum]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  # ============================================================
+  # 4. 外观/物理损坏
+  # ============================================================
+  - code: physical_cable_break
+    label: 线材外皮破损
+    category_group: physical_damage
+    keywords: [线材破皮, 外皮破损, 线皮裂开, 外皮裂了, 皮破了, 破皮]
+    applicable_products: [cable]
+    trigger_handler_action: ESCALATE_REPLACE
+
+  - code: physical_connector_burn
+    label: 接口烧灼 / 焦黑
+    category_group: physical_damage
+    keywords: [接口烧灼, 接口焦黑, 接头烧焦, 充电口烧黑, 接口发黑]
+    applicable_products: [cable, power_bank, charger]
+    trigger_handler_action: ESCALATE_REPLACE
+
+  - code: physical_connector_damage
+    label: 接口损坏 / 变形
+    category_group: physical_damage
+    keywords: [接口损坏, 接口变形, 插脚弯, 接口松动, 充电口坏]
+    applicable_products: [cable, power_bank, charger, earphone]
+    trigger_handler_action: ESCALATE_REPLACE
+
+  - code: physical_shell_break
+    label: 外壳破损 / 屏幕碎裂
+    category_group: physical_damage
+    keywords: [外壳破损, 外壳碎了, 屏幕碎裂, 屏碎, 屏裂, 摔碎了, 摔裂了, 屏幕破损]
+    applicable_products: [earphone, breast_pump, vacuum]
+    trigger_handler_action: ESCALATE_REPLACE
+
+  - code: physical_water_damage
+    label: 进水
+    category_group: physical_damage
+    keywords: [进水, 泡水, 掉水里, 浸水, 沾水]
+    applicable_products: [earphone, breast_pump, vacuum]
+    trigger_handler_action: ESCALATE_REPLACE
+
+  # ============================================================
+  # 5. 性能异常
+  # ============================================================
+  - code: perf_no_suction
+    label: 不吸 / 吸力弱
+    category_group: performance
+    keywords: [不吸, 吸不住, 不能吸, 吸力, 吸不出, 吸力弱, 吸力下降]
+    applicable_products: [breast_pump, vacuum]
+    trigger_handler_action: PRODUCT_DISAMBIG_REQUIRED  # 需先消歧 S1 Pro
+
+  - code: perf_not_working
+    label: 完全不工作
+    category_group: performance
+    keywords: [不工作, 不动, 用不了, 不响应, 没反应, 罢工, 彻底不工作]
+    applicable_products: [all]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  - code: perf_abnormal_noise
+    label: 异响
+    category_group: performance
+    keywords: [异响, 噪音, 异声, 嗡嗡响, 咔嗒声, 杂音]
+    applicable_products: [charger, vacuum, earphone]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  - code: perf_overheat_normal
+    label: 一般发热（充电/使用时）
+    category_group: performance
+    keywords: [发热, 发烫, 热得很, 有点热]
+    applicable_products: [charger, power_bank]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+    note: "如温度异常高（烫手/焦味）应归 safety_hazard_hot 而非此项"
+
+  # ============================================================
+  # 6. Soundcore 耳机专属
+  # ============================================================
+  - code: audio_one_side_silent
+    label: 单边没声音
+    category_group: audio
+    keywords: [单边没声音, 一只没声音, 左边不响, 右边不响, 一边不响, 一边无声]
+    applicable_products: [earphone]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  - code: audio_no_sound_both
+    label: 双边都没声音
+    category_group: audio
+    keywords: [没声音, 无声, 不出声, 完全没声, 两个都不响]
+    applicable_products: [earphone]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  - code: audio_connection
+    label: 蓝牙连接问题
+    category_group: audio
+    keywords: [连不上蓝牙, 蓝牙断了, 配对失败, 连接断开, 无法连接, 蓝牙问题]
+    applicable_products: [earphone]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  - code: audio_charge_case
+    label: 充电盒异常
+    category_group: audio
+    keywords: [充电盒不充电, 充电盒没电, 盒子灯不亮, 充电盒故障]
+    applicable_products: [earphone]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  # ============================================================
+  # 7. RoboVac 扫地机专属
+  # ============================================================
+  - code: vacuum_dust_bin
+    label: 尘盒相关问题
+    category_group: vacuum
+    keywords: [尘盒, 尘满, 尘盒满, 尘盒不识别, 尘盒卡]
+    applicable_products: [vacuum]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  - code: vacuum_brush
+    label: 滚刷 / 边刷故障
+    category_group: vacuum
+    keywords: [滚刷, 边刷, 滚刷卡住, 边刷不动, 滚刷不转, 缠线]
+    applicable_products: [vacuum]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  - code: vacuum_sensor
+    label: 传感器 / 导航异常
+    category_group: vacuum
+    keywords: [传感器, 导航, 悬崖, 跌落, 迷路, 不认路, 找不到基站]
+    applicable_products: [vacuum]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  - code: vacuum_dock
+    label: 回充失败
+    category_group: vacuum
+    keywords: [回充失败, 回不了充电桩, 找不到桩, 不回充, 充电桩]
+    applicable_products: [vacuum]
+    trigger_handler_action: TROUBLESHOOT_FAULT_TREE
+
+  # ============================================================
+  # 8. 召回专用（强制检索触发）
+  # ============================================================
+  - code: recall_inquiry
+    label: 召回咨询
+    category_group: recall
+    keywords: [召回, 召回批次, 召回名单, 召回公告, 召回型号]
+    applicable_products: [all]
+    trigger_handler_action: MANDATORY_POLICY_RETRIEVE
+    note: "任何召回咨询必须先调 policy_retrieve，禁止自由发挥"
+
+# ============================================================
+# 分类汇总（用于 vision_extract 输出约束）
+# ============================================================
+category_groups:
+  safety_hazard: [safety_hazard_bulge, safety_hazard_leak, safety_hazard_fire, safety_hazard_hot]
+  charge_failure: [charge_cannot_in, charge_slow, charge_intermittent, charge_abnormal_indicator]
+  power_failure: [power_cannot_boot, power_auto_off, power_no_output, power_dead_battery]
+  physical_damage: [physical_cable_break, physical_connector_burn, physical_connector_damage, physical_shell_break, physical_water_damage]
+  performance: [perf_no_suction, perf_not_working, perf_abnormal_noise, perf_overheat_normal]
+  audio: [audio_one_side_silent, audio_no_sound_both, audio_connection, audio_charge_case]
+  vacuum: [vacuum_dust_bin, vacuum_brush, vacuum_sensor, vacuum_dock]
+  recall: [recall_inquiry]
+
+# ============================================================
+# 适用产品分类（用于 vision_extract product detection）
+# ============================================================
+applicable_product_categories:
+  power_bank: [Anker 737, Anker PowerCore, eufy S1 Pro 吸奶器]
+  charger: [Anker 45W / 65W / 100W 充电器, Nano 系列]
+  cable: [Anker USB-C / Lightning / USB-A 线材]
+  earphone: [Soundcore Liberty, Life, Space 系列]
+  breast_pump: [eufy 吸奶器 S1 Pro]
+  vacuum: [eufy RoboVac 扫地机器人 S1 Pro]
+
+# ============================================================
+# 视觉质量门控（像素层画质检查，行业方案 4.3 节）
+# ============================================================
+vision_quality_gate:
+  min_resolution: [200, 200]    # 像素太小的图片要求重传
+  min_brightness: 30            # 太暗要求重传
+  max_brightness: 240           # 过曝要求重传
+  blur_threshold: 0.6           # 高于此值判定模糊
+  fallback_when_poor: "图片不够清晰，请重新拍摄清晰照片"
+
+# ============================================================
+# 受控输出 schema（vision_extract 严格遵循）
+# ============================================================
+output_schema:
+  required_fields: [model, model_brand, failure_code, failure_text, confidence, is_anker]
+  optional_fields: [location, escalation, trigger_handler_action]
+  model_brand_enum: [Anker, Soundcore, eufy, Baseus, Xiaomi, ROMOSS, HUAWEI, Other, Unknown]
+  failure_code_source: "failure_modes.yaml/categories[].code"
+  is_anker_default: true  # 保守原则：仅当清晰看到非 Anker 品牌才标 false
+  confidence_levels:
+    - range: [0.9, 1.0]
+      quality: high
+      vision_skip: true
+    - range: [0.7, 0.9]
+      quality: medium
+      vision_skip: true
+    - range: [0.4, 0.7]
+      quality: low
+      vision_skip: false
+      fallback: "向用户确认"
+    - range: [0.0, 0.4]
+      quality: unclear
+      vision_skip: false
+      fallback: "反问用户描述"

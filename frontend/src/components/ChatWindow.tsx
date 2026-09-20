@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import type { ChatMessage } from '../types';
+import ProductDisambigCard, { type ProductCandidate } from './ProductDisambigCard';
 
 interface Props {
   messages: ChatMessage[];
@@ -9,6 +10,10 @@ interface Props {
   error: string | null;
   retryAttempt: number;
 }
+
+
+
+
 
 export default function ChatWindow({ messages, isStreaming, onSend, onReset, error, retryAttempt }: Props) {
   const [input, setInput] = useState('');
@@ -25,7 +30,9 @@ export default function ChatWindow({ messages, isStreaming, onSend, onReset, err
 
   const handleSend = () => {
     const text = input.trim();
-    if (!text || isStreaming) return;
+    if (isStreaming) return;
+    // 允许空文本发送：如果只上传了图片，直接发送图片
+    if (!text && images.length === 0) return;
     onSend(text, images.map(url => ({ type: 'image', url })));
     setInput('');
     setImages([]);
@@ -73,7 +80,18 @@ export default function ChatWindow({ messages, isStreaming, onSend, onReset, err
             </div>
           </div>
         ) : (
-          messages.map(m => <MessageBubble key={m.id} message={m} />)
+          messages.map(m => (
+            <MessageBubble
+              key={m.id}
+              message={m}
+              onConfirmProduct={(id, name) => {
+                // 用户点选产品 → 自动发送 "是 + 产品名"
+                const confirmText = `是 ${name}`;
+                onSend(confirmText);
+              }}
+              isBusy={isStreaming}
+            />
+          ))
         )}
         {error && (
           <div style={{ color: 'var(--color-danger)', fontSize: 12, padding: 8 }}>
@@ -139,7 +157,7 @@ export default function ChatWindow({ messages, isStreaming, onSend, onReset, err
           <button
             className="btn"
             onClick={handleSend}
-            disabled={!input.trim() || isStreaming}
+            disabled={(!input.trim() && images.length === 0) || isStreaming}
           >
             {isStreaming ? <span className="spinner" /> : '发送'}
           </button>
@@ -149,22 +167,64 @@ export default function ChatWindow({ messages, isStreaming, onSend, onReset, err
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({
+  message,
+  onConfirmProduct,
+  isBusy,
+}: {
+  message: ChatMessage;
+  onConfirmProduct: (id: string, name: string) => void;
+  isBusy: boolean;
+}) {
   const isUser = message.role === 'user';
+  const rawContent = message.content || '';
 
-  // 去掉 __STATE__{...}__STATE__ 标记（这是 metadata，不显示给用户）
-  const displayContent = (message.content || '').replace(/__STATE__\{[\s\S]*?\}__STATE__/g, '').trim();
+  // 1. 检测 __PRODUCT_DISAMBIG__{json}__PRODUCT_DISAMBIG_END__ 标记
+  const disambigMatch = rawContent.match(/__PRODUCT_DISAMBIG__\{([\s\S]*?)\}__PRODUCT_DISAMBIG_END__/);
+
+  // 去掉 metadata 标记 + 消歧 marker
+  let displayContent = rawContent
+    .replace(/__STATE__\{[\s\S]*?\}__STATE__/g, '')
+    .replace(/__PRODUCT_DISAMBIG__\{[\s\S]*?\}__PRODUCT_DISAMBIG_END__/g, '')
+    .trim();
+
+  let disambigData: { candidates: ProductCandidate[] } | null = null;
+  if (disambigMatch) {
+    try {
+      const parsed = JSON.parse(disambigMatch[1]);
+      if (Array.isArray(parsed.candidates)) {
+        disambigData = parsed;
+      }
+    } catch (e) {
+      // single-quote Python-style JSON fallback
+      const sanitized = disambigMatch[1].replace(/'/g, '"');
+      try {
+        const parsed = JSON.parse(sanitized);
+        if (Array.isArray(parsed.candidates)) {
+          disambigData = parsed;
+        }
+      } catch (e2) {
+        console.error('[ProductDisambig] JSON parse failed', e, e2);
+      }
+    }
+  }
 
   return (
     <div className={`msg ${isUser ? 'user' : 'assistant'}`}>
       <div className="msg-avatar">{isUser ? '我' : 'AI'}</div>
       <div>
         <div className="msg-bubble">
-          {displayContent}
-          {!isUser && message.content === '' && (
-            <span className="streaming-cursor" />
-          )}
+          {displayContent || (!isUser && message.content === '' && <span className="streaming-cursor" />)}
         </div>
+
+        {/* 产品消歧卡片 - 在 AI 回复下方渲染 */}
+        {!isUser && disambigData && (
+          <ProductDisambigCard
+            candidates={disambigData.candidates}
+            onConfirm={onConfirmProduct}
+            disabled={isBusy}
+          />
+        )}
 
         {!isUser && message.thinking && (
           <details className="msg-thought">
