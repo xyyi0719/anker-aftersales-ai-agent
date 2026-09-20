@@ -261,14 +261,6 @@ export function inferVisionEvidence(query: string, attachments: Array<{ type: st
   confidence: number;
   is_anker_product: boolean;
 } | undefined {
-  if (!attachments || attachments.length === 0) return undefined;
-  const product = inferProductModel(query);
-  const safety = inferSafety(query);
-  return {
-    product_model: product?.model || 'unknown',
-    fault_location: '电池仓',
-    fault_phenomenon: safety.keyword || 'unknown',
-    confidence: 0.85,
-    is_anker_product: !!product,
-  };
+  // Static frontend text cannot determine image evidence.
+  return undefined;
 }

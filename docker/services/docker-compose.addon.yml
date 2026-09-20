@@ -1,58 +1,43 @@
-# Anker 后赛 Mock APIs + Retrieval 增补服务
-# 合并到 dify/docker-compose.yml 后运行，或者单独：
-#   docker compose -f docker-compose.yml -f docker-compose.addon.yml up -d
-#
-# 假设 dify 主 compose 用 network 名为 "default" 或 "dify_default"
-# 实际部署时需要根据 dify/docker-compose.yaml 的 networks 配置修改下面 networks 部分
-
-networks:
-  default:
-    name: dify_default   # ← 改成你 dify 的实际网络名
-
+# From repository root: docker compose --env-file .env -f docker/services/docker-compose.addon.yml up -d --build
 services:
   retrieval:
     build:
-      context: ../
+      context: ../..
       dockerfile: docker/services/Dockerfile
-    container_name: anker-retrieval
-    restart: always
-    environment:
-      - PYTHONUNBUFFERED=1
-      - M3_API_BASE=${M3_API_BASE:-https://api.MiniMax.com/v1}
-      - M3_EMBED_MODEL=${M3_EMBED_MODEL:-MiniMax-embed-01}
-      - M3_API_KEY=${M3_API_KEY}
-    volumes:
-      # 政策文档 + 索引持久化
-      - retrieval_data:/app/retrieval/data
-    command: ["uvicorn", "retrieval.app:app", "--host", "0.0.0.0", "--port", "8001", "--app-dir", "/app"]
+    restart: unless-stopped
+    command: [uvicorn, retrieval.app:app, --host, 0.0.0.0, --port, '8001']
+    networks: [internal]
     healthcheck:
-      test: ["CMD", "python", "/app/healthcheck.py", "8001"]
-      interval: 30s
+      test: [CMD, python, /app/healthcheck.py, '8001']
+      interval: 15s
       timeout: 5s
-      retries: 3
-    networks:
-      - default
-
+      retries: 5
   mock-apis:
     build:
-      context: ../
+      context: ../..
       dockerfile: docker/services/Dockerfile
-    container_name: anker-mock-apis
-    restart: always
+    restart: unless-stopped
+    environment:
+      RETRIEVAL_URL: http://retrieval:8001
+      TICKET_DB: /data/tickets.sqlite3
+      MOCK_API_KEY: ${MOCK_API_KEY:-}
+    volumes: [tickets:/data]
     depends_on:
       retrieval:
         condition: service_healthy
-    environment:
-      - PYTHONUNBUFFERED=1
-      - RETRIEVAL_URL=http://retrieval:8001
-    command: ["uvicorn", "mock_apis.app:app", "--host", "0.0.0.0", "--port", "8002", "--app-dir", "/app"]
-    healthcheck:
-      test: ["CMD", "python", "/app/healthcheck.py", "8002"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
     networks:
-      - default
-
+      internal: {}
+      dify:
+        aliases: [anker-demo-api]
+    healthcheck:
+      test: [CMD, python, /app/healthcheck.py, '8002']
+      interval: 15s
+      timeout: 5s
+      retries: 5
+networks:
+  internal: {}
+  dify:
+    external: true
+    name: ${DIFY_NETWORK:-docker_default}
 volumes:
-  retrieval_data:
+  tickets: {}

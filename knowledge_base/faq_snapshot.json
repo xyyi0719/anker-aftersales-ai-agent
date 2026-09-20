@@ -1,0 +1,282 @@
+[
+  {
+    "chunk_id": "faq_anker737_f1",
+    "text": "完全充不进电：换墙插/换线/换充电头逐一排除",
+    "keywords": [
+      "充不进电",
+      "充不上",
+      "自充失败"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.anker.com/article-description/Power-Banks-Charging-Issues",
+      "faq_id": "F1",
+      "product": "Anker737",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_anker737_f2",
+    "text": "不能给别的设备充电：换确认完好的线、换设备试",
+    "keywords": [
+      "不能给",
+      "给手机充不了",
+      "输出失败"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.anker.com/article-description/Power-Banks-Charging-Issues",
+      "faq_id": "F2",
+      "product": "Anker737",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_anker737_f3",
+    "text": "异常断电/指示灯异常/死机：停止反复插拔；确认准确型号后按对应官方说明书复位。仍异常请联系售后，不自行短接或拆机。",
+    "keywords": [
+      "死机",
+      "黑屏",
+      "异常断电"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.anker.com/article-description/Anker-737-Powerbank-Common-Problem-Troubleshooting",
+      "faq_id": "F3",
+      "product": "Anker737",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_anker737_f4",
+    "text": "发热：换充电头+线自充试、换线充别的设备试；持续高温+异味→停用走售后",
+    "keywords": [
+      "发热",
+      "烫手"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.anker.com/article-description/Anker-737-Powerbank-Common-Problem-Troubleshooting",
+      "faq_id": "F4",
+      "product": "Anker737",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_anker737_f5",
+    "text": "掉电快（使用中）：正常转化率约 60%（24000mAh 实际可输出 13000–14000mAh）；满电后再测、换线换设备",
+    "keywords": [
+      "掉电快",
+      "不耐用",
+      "虚标"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.anker.com/article-description/Why-does-Anker-737-PowerBank-drain-so-quickly",
+      "faq_id": "F5",
+      "product": "Anker737",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_anker737_f6",
+    "text": "掉电快（闲置）：别插着 C-Lightning 线（芯片耗电）；开「自动关屏」（不关屏一天耗 15%）；满电静置 1–2 天复测",
+    "keywords": [
+      "闲置",
+      "放着掉电",
+      "不用也掉电"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.anker.com/article-description/Why-does-Anker-737-PowerBank-drain-so-quickly",
+      "faq_id": "F6",
+      "product": "Anker737",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_anker737_f7",
+    "text": "充 iPhone 到 80% 停充/变慢：可能与手机的充电优化或温度保护有关，请先检查手机设置和温度，不能仅凭 80% 停充判定产品无故障。",
+    "keywords": [
+      "80%",
+      "80％",
+      "百分之八十"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.anker.com/article-description/Why-does-Anker-737-PowerBank-stop-charging-when-an-iPhone-is-charged-to-80",
+      "faq_id": "F7",
+      "product": "Anker737",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_anker737_f8",
+    "text": "USB-A 口空载显示 0.1W：正常现象：涓流模式开启（双击电源键关闭）或拔线后残留 2 分钟",
+    "keywords": [
+      "0.1w",
+      "空载"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.anker.com/article-description/Why-is-there-a-0-1W-output-shown-for-the-Anker-737-PowerBank-s-USB-A-port-when-nothing-is-connected",
+      "faq_id": "F8",
+      "product": "Anker737",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_anker737_f9",
+    "text": "屏幕出现 UVP 警告（充笔记本/DJI 时）：C1 口双向供电误识别 → 换 C2 口（纯输出）；DJI Mini 3 Pro 为已知兼容问题",
+    "keywords": [
+      "uvp"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.anker.com/article-description/Anker-737-Power-Bank-Special-Issues-Troubleshooting-FAQs",
+      "faq_id": "F9",
+      "product": "Anker737",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_anker737_f10",
+    "text": "输出达不到 140W：需线材+设备同时支持 140W；MacBook Pro 16\" 建议 C 转 MagSafe",
+    "keywords": [
+      "140w",
+      "达不到功率"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.anker.com/article-description/Anker-737-Power-Bank-Special-Issues-Troubleshooting-FAQs",
+      "faq_id": "F10",
+      "product": "Anker737",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_anker737_f11",
+    "text": "多口插拔时另一口断连：正常现象：智能功率分配重新协商 PDO",
+    "keywords": [
+      "多口",
+      "插拔"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.anker.com/article-description/Anker-737-Power-Bank-Special-Issues-Troubleshooting-FAQs",
+      "faq_id": "F11",
+      "product": "Anker737",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_anker737_f12",
+    "text": "充电慢/功率显示不准：智能算法按温度动态调功；以「实际充满时间」为准判断，别看瞬时功率",
+    "keywords": [
+      "充电慢",
+      "功率显示不准"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.anker.com/article-description/Anker-737-Powerbank-Common-Problem-Troubleshooting",
+      "faq_id": "F12",
+      "product": "Anker737",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_soundcore_s1",
+    "text": "单边无声/声音小：①调整佩戴或换大号耳塞；②酒精棉签清洁出声孔金属网；③检查手机「音频平衡」设置；④重置",
+    "keywords": [
+      "单边没声音",
+      "单边无声",
+      "一边没声",
+      "一个响"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.soundcore.com/article-description/What-if-there-is-little-or-no-sound-coming-from-one-of-the-earbuds",
+      "faq_id": "S1",
+      "product": "Soundcore",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_soundcore_s2",
+    "text": "单边不开机/不配对：请先确认耳机准确型号，再查看对应官方配对、清洁或重置步骤；不同型号不可直接套用按键时长。",
+    "keywords": [
+      "不开机",
+      "单边不配对"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.soundcore.com/article-description/How-to-Fix-soundcore-V30i-Earbuds-One-Sided-Issues",
+      "faq_id": "S2",
+      "product": "Soundcore",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_soundcore_s3",
+    "text": "配对失败/断连：请先确认耳机准确型号，再查看对应官方配对、清洁或重置步骤；不同型号不可直接套用按键时长。",
+    "keywords": [
+      "断连",
+      "蓝牙连不上",
+      "配对失败"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.soundcore.com/article-description/How-can-I-troubleshoot-the-following-connection-issues-with-soundcore-Liberty-5-Pro",
+      "faq_id": "S3",
+      "product": "Soundcore",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_soundcore_s4",
+    "text": "配对后无声：请先确认耳机准确型号，再查看对应官方配对、清洁或重置步骤；不同型号不可直接套用按键时长。",
+    "keywords": [
+      "配对后无声",
+      "连接后没声"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.soundcore.com/article-description/What-Should-I-Do-if-There-Is-No-Sound-After-Pairing-or-Only-One-Side-Has-a-Sound",
+      "faq_id": "S4",
+      "product": "Soundcore",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  },
+  {
+    "chunk_id": "faq_soundcore_s5",
+    "text": "左右耳音量不一致：请先确认耳机准确型号，再查看对应官方配对、清洁或重置步骤；不同型号不可直接套用按键时长。",
+    "keywords": [
+      "音量不一致",
+      "一边声音小"
+    ],
+    "metadata": {
+      "source": "本地 FAQ 整理快照（非实时核验）",
+      "source_url": "https://service.soundcore.com/article-description/How-to-fix-the-Volume-issue-of-One-Earbud-Is-Quieter-Than-the-Other",
+      "faq_id": "S5",
+      "product": "Soundcore",
+      "snapshot_date": "2026-09-16",
+      "verified_live": false
+    }
+  }
+]

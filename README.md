@@ -1,235 +1,83 @@
-# Anker 智能售后 AI Agent
+# Anker 售后 AI 助手
 
-> **Anker 首届黑客松（2026）参赛作品 · 赛道 04「智能服务 — 真正听懂，真正解决」**
->
-> 团队：**新航无Bug**
->
-> 一个面向真实售后场景的 AI 智能客服 Agent，结合用户文本、故障图片、技术知识库与历史工单信息，完成情绪识别 / 产品消歧 / 故障定位 / 排障引导 / 升级处理的全链路。
+新航无Bug · 安克黑客松智能服务赛道。基于现有 React 工作台、Dify Chatflow 和 FastAPI 服务进行增量完善。
 
----
+当前版本不需要 embedding 模型或 Dify 知识库。订单、权益与工单使用模拟数据；FAQ 检索、排障状态推进和交接记录实际执行。模型用于意图理解与图片证据提取，售后决策由受限规则控制。
 
-## ✨ 项目亮点
+## 本次交付
 
-### 1. 「幻觉四道防线」
+- `mock_apis/`：原订单数据 + 3 个易于演示的订单；统一核保、政策路由、SQLite 模拟工单、对话规则接口。
+- `retrieval/lexical.py`：自动加载 17 条本地 FAQ 的离线 BM25 检索，中文二元组与英文词切分，结合明确口语匹配；没有 embedding 网络请求。
+- `knowledge_base/`：可跟随 Git 部署的 FAQ/政策/口语素材快照及可追溯来源。不是实时官方政策。
+- `frontend/`：聊天优先，按需展开处理依据；不再编造视觉置信度或显示猜测的办理结果。
+- `chatflow/anker-aftersales-chatflow.yml`：主流程；`anker-offline-debug.yml` 为无模型文字联调版本。
+- `docs/reviews/参赛方案审核.md`：按官方模板审核主张与实现证据；`docs/CHANGELOG.md` 记录全部变更与验证边界。
 
-| 防线 | 实现 |
-|---|---|
-| **流程锁** | 召回类 / 质保类问题强制检索，禁止自由发挥 |
-| **出处锁** | 政策类回答强制带条款号 + chunk_id 可点击追溯 |
-| **置信度锁** | 检索低置信度（top1_score 偏低、gap 太小、BM25 无命中）触发固定「我暂时没把握」升级话术 |
-| **权限锁** | 工具白名单仅 `query_order` / `check_warranty` / `policy_retrieve` / `create_ticket`，退款/支付/承诺类一律不允许 |
+## 本地运行
 
-### 2. 6 类意图 + 情绪三级
-
-- 意图：故障排障 / 政策咨询 / 退换货 / 转人工 / 投诉 / 范围外
-- 情绪：normal / upset / angry / complaint — 升级时附带结构化交接摘要（问题 / 定位结论 / 已尝试 / 订单号 / 情绪等级 / 工具调用数）
-
-### 3. 多模态视觉跳级
-
-- 用户上传故障图 → LLM 抽取四元组（型号 / 位置 / 现象 / 置信度）
-- confidence ≥ 0.8 且匹配已知故障树 → 直接跳级到对应排障步骤
-- safety_hazard（鼓包 / 漏液 / 起火 / 烧灼 / 焦黑）→ 强制安全警告 P0 升级
-- 非 Anker / Soundcore / eufy 品牌（Baseus / 小米 / 罗马仕）→ 礼貌拒答
-
-### 4. 混合检索 + 置信度三重判定
-
-- FAISS 向量 + BM25 关键词 → RRF 融合
-- confidence = 绝对 top1_score（不是平均） + gap (top1-top2) + BM25 命中率
-- 12 张图测试 100% 通过率（含 Baseus 拒答）
-
----
-
-## 📊 关键测试指标
-
-| 维度 | 数值 |
-|---|---|
-| 12 张图视觉测试通过率 | **100%** (12/12) |
-| must-pass 安全图（03/04 鼓包） | **100%** 触发安全升级 |
-| must-pass 拒答图（11/12 Baseus） | **100%** 正确识别 |
-| 12 用例回归 smoke | 12/12 PASS（含 retry） |
-| 知识库 chunks 数 | 53（5 政策 + 17 FAQ + 25 口语映射 + 3 真实投诉 + 3 配置）|
-
----
-
-## 🏗️ 架构
-
-```
-┌──────────────────────────────────────────────────────────────┐
-│                    React + TypeScript 工作台                     │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
-│  │ ChatWindow   │  │ StatusCards │  │ RetrievalLog│            │
-│  │ (SSE 流式)   │  │ 意图/情绪/  │  │ 出处锁 UI  │            │
-│  │             │  │ 产品/路径    │  │             │            │
-│  └─────────────┘  └─────────────┘  └─────────────┘            │
-└────────────────────────────┬─────────────────────────────────┘
-                             │ POST /chat-messages
-                             │ (5 字段纪律)
-                             ↓
-┌──────────────────────────────────────────────────────────────┐
-│                    Dify Chatflow (15 节点)                      │
-│  Start → emotion → intent → tool_dispatch → vision_extract    │
-│         → router(6 类) → 6 handler → aggregator → answer      │
-│                                                              │
-│   • 工具调度: code_node 预调 (mock_apis / 检索 / 视觉)           │
-│   • 多模态: vision_extract LLM + 视觉证据处理                    │
-│   • 记忆: 8 个 LLM 节点 memory.window enabled size=10         │
-└──────────┬─────────────────────────────────┬─────────────────┘
-           ↓                                 ↓
-┌─────────────────────┐         ┌──────────────────────────┐
-│  Mock APIs           │         │ 混合检索服务                  │
-│  • /orders           │         │  FAISS + BM25 + RRF       │
-│  • /warranty         │         │  53 chunks 知识库           │
-│  • /tickets          │         │  置信度三重判定               │
-│  • /policy/retrieve  │         └──────────────────────────┘
-└─────────────────────┘
-```
-
----
-
-## 🛠️ 技术栈
-
-| 层 | 技术 |
-|---|---|
-| 前端 | React 18 + TypeScript + Vite 5（无 UI 库，纯手写 CSS）|
-| 工作流编排 | 自托管 Dify 1.17.1（社区版） |
-| LLM | MiniMax-M3（验证：工具链 / 图片 / 延迟）|
-| 检索 | FAISS（向量）+ BM25（关键词 jieba 分词）+ RRF 融合 |
-| 服务 | FastAPI + Uvicorn + Pydantic |
-| 容器化 | Docker + Docker Compose（multi-service add-on）|
-| 部署 | Nginx Alpine 反向代理前端 + 服务 Docker 网络互联 |
-
----
-
-## 📁 目录结构
-
-```
-.
-├── README.md                          # 本文件
-├── Anker售后.yml                       # Dify 0.7 参考模板（队友上传）
-├── 新航无Bug参赛任务手册V4(1).md       # 队长维护的任务手册
-│
-├── chatflow/                          # Chatflow DSL + prompts
-│   ├── anker-aftersales-chatflow.yml  # 主 DSL（15 节点，4.2 P0+P1）
-│   ├── prompts/                       # 8 个 LLM 节点系统提示词
-│   ├── templates/                     # 故障树 + 政策路由示例
-│   └── variable_mapping.md            # 变量映射文档
-│
-├── frontend/                          # React + TS 工作台
-│   └── src/
-│       ├── App.tsx                    # 主布局：聊天窗 + 状态卡 + 6 面板
-│       ├── components/                # 8 个组件
-│       │   ├── ChatWindow             # SSE 流式消息渲染
-│       │   ├── StatusCards            # 6 卡片状态栏
-│       │   ├── SidePanel              # 任务/路由/情绪/检索
-│       │   ├── TaskList               # 多意图任务拆分
-│       │   ├── RoutingPath            # 路由路径时间线
-│       │   ├── EmotionChart           # 情绪变化曲线
-│       │   ├── RetrievalLog           # 出处锁 UI
-│       │   └── TransferSummary        # 转人工摘要卡
-│       ├── hooks/
-│       │   ├── useDifyChat            # 5 字段纪律 + AbortController
-│       │   └── useEventParser         # __STATE__ 解析 + 实时状态更新
-│       └── utils/inference.ts         # 前端关键词分类（fallback）
-│
-├── retrieval/                         # 混合检索服务
-│   ├── app.py                         # FastAPI 入口 (/retrieve, /index)
-│   ├── retriever.py                   # FAISS+BM25+RRF + 置信度三重判定
-│   ├── chunker.py                     # 政策/手册/FAQ 分片器
-│   ├── embedder.py                    # M3 Embedding + 离线 fallback
-│   ├── config.py
-│   └── scripts/
-│       ├── seed_demo.py               # 4 文档 demo 灌库
-│       └── seed_material_library.py   # 53 chunks 真实素材灌库
-│
-├── mock_apis/                         # 售后 Mock API 服务
-│   ├── app.py
-│   ├── openapi_spec.json              # OpenAPI 3.x 定义（Dify 工具导入用）
-│   ├── routes/                        # orders / warranty / tickets / policy
-│   └── data/orders.json               # 20 条种子订单
-│
-├── docker/                            # Docker 镜像构建
-│   └── services/                      # mock_apis + retrieval 一体化镜像
-│
-├── docs/                              # 项目文档
-│   ├── 00-progress.md                 # 开发进度
-│   ├── 01-architecture.md             # 架构详解
-│   ├── 02-decisions.md                # 技术决策记录
-│   └── guides/                        # 各类指南
-│
-├── knowledge_base/                    # 知识库说明
-└── 素材库/                             # captain 提供的真实素材
-    ├── FAQ/                           # 官方 FAQ + 差评语料映射
-    ├── 售后政策/                       # 中美欧三包政策
-    ├── 配置/                           # 故障树 + 政策路由 JSON
-    ├── 产品说明书/                     # PDF 产品手册（Anker 737）
-    └── 图片/测试集/                    # 12 张测试图
-```
-
----
-
-## 🚀 快速开始（本地开发）
-
-### 前置依赖
-
-- Node.js 18+
-- Python 3.11
-- Dify 0.7+ 自托管实例
-- MiniMax M3 API Key
-
-### 启动检索服务
+需要 Python 3.11+、Node.js 22。
 
 ```bash
-cd retrieval
-pip install -r requirements.txt
-python scripts/seed_material_library.py    # 灌库
-python app.py              # 启动 :8001
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements-test.txt
+python -m pytest tests -q
+uvicorn mock_apis.app:app --host 127.0.0.1 --port 8002
 ```
 
-### 启动 Mock API
+未设置 `RETRIEVAL_URL` 时 Mock 服务直接调用同一离线检索实现；部署时通过 HTTP 使用独立检索容器。独立启动：
 
 ```bash
-cd mock_apis
-pip install -r requirements.txt
-python app.py             # 启动 :8002
+uvicorn retrieval.app:app --host 127.0.0.1 --port 8001
 ```
 
-### 启动前端
+前端开发：复制 `frontend/.env.example` 为 `frontend/.env`，配置 **服务端** `DIFY_API_KEY`，然后在 `frontend/` 执行 `npm ci && npm run dev`。密钥不使用 `VITE_` 前缀，不进入浏览器包。
+
+## Dify 导入（不会自动改线上流程）
+
+1. 备份线上应用 DSL，再导入 `chatflow/anker-aftersales-chatflow.yml` 创建测试应用。应用类型是 **Chatflow / advanced-chat**。
+2. `MOCK_API_BASE_URL` 默认为 `http://anker-demo-api:8002`，对应本仓库部署后的网络别名。与旧的 `mock-apis` 服务名区分，避免影响旧流程。
+3. 保留了原 YAML 的 MiniMax 模型配置；在 Dify 核实模型与视觉能力是否可用。无需配置 embedding 或知识库。
+4. 默认 Mock 接口只在 Docker 网络内开放；如果设置 `MOCK_API_KEY`，同步填写 Dify 环境变量。
+5. 测试后发布新流程。若创建了新应用，则更新 GitHub `DIFY_API_KEY` Secret 后重新运行 Actions；如果在原应用更新，保留原应用接口配置。
+
+Dify 原生调试输出会包含供工作台解析的 `__EVIDENCE_V1__` 标记。工作台隐藏标记，只展示用户答复和按需展开的结构化依据。HTTP 失败时不虚称已核保/建工单，保留原会话状态。
+
+## 部署与 ZIP
+
+沿用 `.github/workflows/deploy-frontend.yml`、现有服务器 Actions 凭据及 `/home/ubuntu/workbench-deploy` 前端位置。流水线先验证再部署：
+
+1. Python 回归、前端构建、生成 ZIP 与 SHA256。
+2. 验证 Compose 配置并构建后端镜像。
+3. 使用既有 SSH Secrets 上传前端与新增服务；在现有 Docker 网络上启动 `anker-demo` 独立 Compose 项目。
+4. 更新前端 Nginx 代理，验证 Nginx、首页和服务健康。
+
+所需 Secrets：原有 `SERVER_HOST`、`SERVER_USER`、`SERVER_SSH_KEY`，以及 `DIFY_API_KEY`。旧仓库出现过明文应用密钥，本次从源码移除并迁至 Secret；历史记录中的旧值仍需要在 Dify 更换。
+
+本地打包与 CI 共用：
 
 ```bash
 cd frontend
-cp .env.example .env      # 配置 DIFY_API_KEY
-npm install
-npm run dev               # 启动 :5173
+npm ci
+npm run build
+cd ..
+python scripts/package_release.py
 ```
 
-### Dify Chatflow 导入
+生成 `release/anker-aftersales-release.zip`、`SHA256SUMS`。ZIP 包含已构建前端、后端、资料、流程、文档和文件哈希清单，排除密钥、虚拟环境、工单数据库与 Git 历史。不是包含 Docker 镜像和离线依赖的安装包；服务器首次构建需要联网。
 
-打开 Dify Studio → 「···」→ 导入 DSL → 选 `chatflow/anker-aftersales-chatflow.yml` → 覆盖
+## 演示验收
 
----
+| 场景 | 输入 | 预期 |
+|---|---|---|
+| 排障状态 | Anker 737 充不进电 → 自己 → 仍不行 → 黑屏 | 状态依次推进，最后生成模拟交接 |
+| FAQ | 耳机单边没声音 | 命中 S1，附资料快照来源 |
+| 核保 | DEMO-US-001 保修多久 | 按订单读取美国官网模拟规则 |
+| 渠道 | DEMO-AMZ-001 退货 | 退款渠道为亚马逊，避免直接承诺 |
+| 中国区 | DEMO-CN-001 保修多久 | 中国区模拟规则 |
+| 召回 | 这个型号有召回吗 | 缺乏实时依据，升级；不声称没有召回 |
+| 安全 | Anker 737 鼓包了 | 停止使用，安全状态锁定，生成模拟工单 |
+| 消歧 | 我的 S1 Pro 不吸了 | 先确认品类；未支持品类转专员 |
+| 多意图 | Anker 737 充不进电还想保修 | 排障与核保各自显示任务状态 |
 
-## 🎯 决赛 / 后续方向
-
-- 接入真实 Anker 工单系统 API（替换 Mock）
-- 多语言支持（英文 / 日文 — Anker 海外业务）
-- 历史工单召回（结合用户 ID）
-- 端到端 P95 延迟 < 2s 优化
-- 工单知识库自动更新管道
-
----
-
-## 📝 参赛信息
-
-- **赛事**：Anker 首届黑客松（2026.09.07 ~ 10.26）
-- **赛道**：04 智能服务 — 「真正听懂，真正解决」
-- **团队**：新航无Bug（2 人）
-- **作品亮点**：自托管 Dify + M3 + React 工作台 + 「幻觉四道防线」+ 多模态视觉
-- **报名时间**：2026-09-07
-- **预赛材料提交**：2026-09-27 23:59
-- **决赛**：2026-10-16 ~ 10.17（深圳，24H 开发 + 路演）
-
----
-
-## 📄 License
-
-本仓库用于 Anker 首届黑客松参赛作品展示，仅供学习交流使用。
+当前静态测试不等于线上 Dify/视觉端到端验收。真实模型看图、线上导入、真实客服接单都不能以本地单测代替。

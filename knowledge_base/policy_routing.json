@@ -1,0 +1,111 @@
+{
+  "dimensions": [
+    "channel",
+    "region",
+    "category"
+  ],
+  "rules": [
+    {
+      "match": {
+        "channel": "official_site",
+        "region": "CN",
+        "category": "power_bank"
+      },
+      "policy": {
+        "warranty_months": 18,
+        "return_window_days": 7,
+        "return_rule": "中国区官网模拟订单按性能故障和购买凭证进入退换修审核",
+        "sop_branch": "CN_OFFICIAL_REVIEW",
+        "source": "参赛模拟场景配置，非官方实时政策"
+      }
+    },
+    {
+      "match": {
+        "channel": "official_site",
+        "region": "US",
+        "category": "power_bank"
+      },
+      "policy": {
+        "warranty_months": 24,
+        "return_window_days": 30,
+        "return_rule": "30 天无理由退货：需全配件+原包装，非质量原因买家承担运费，退款到仓验收后 3-5 个工作日原路退回",
+        "sop_branch": "US_OFFICIAL_RMA",
+        "source": "anker.com warranty timeline + 30-Day Money-Back FAQ"
+      }
+    },
+    {
+      "match": {
+        "channel": "amazon",
+        "region": "US",
+        "category": "power_bank"
+      },
+      "policy": {
+        "warranty_months": 24,
+        "return_window_days": 30,
+        "return_rule": "退款联系亚马逊平台办理；保修由 Anker 官方承担",
+        "sop_branch": "US_AMAZON_SPLIT",
+        "source": "官方 FAQ：非官网购买的退款需联系零售商"
+      }
+    },
+    {
+      "match": {
+        "channel": "tmall_jd",
+        "region": "CN",
+        "category": "power_bank"
+      },
+      "policy": {
+        "warranty_months": 18,
+        "return_window_days": 7,
+        "return_rule": "三包：7 日内性能故障可退可换；8-15 日可换；16 日-1 年免费修（同故障两次修不好可换）；需发票+三包凭证",
+        "sop_branch": "CN_THREE_GUARANTEES",
+        "source": "Anker 中国三包政策文档"
+      }
+    },
+    {
+      "match": {
+        "channel": "tmall_jd",
+        "region": "CN",
+        "category": "earbuds"
+      },
+      "policy": {
+        "warranty_months": 18,
+        "return_window_days": 7,
+        "return_rule": "同 CN 三包规则",
+        "sop_branch": "CN_THREE_GUARANTEES",
+        "source": "Anker 中国三包政策文档"
+      }
+    },
+    {
+      "match": {
+        "channel": "official_site",
+        "region": "EU",
+        "category": "earbuds"
+      },
+      "policy": {
+        "warranty_months": 24,
+        "return_window_days": 30,
+        "return_rule": "欧盟法定 2 年保修优先于品牌承诺",
+        "sop_branch": "EU_STATUTORY",
+        "source": "欧盟消费者法定保修通则"
+      }
+    },
+    {
+      "match": {
+        "channel": "any",
+        "region": "CN",
+        "category": "any",
+        "condition": "non_cn_sold"
+      },
+      "policy": {
+        "sop_branch": "REGION_LOCKED",
+        "return_rule": "非中国大陆销售的 Anker 产品不享受中国大陆三包服务",
+        "source": "Anker 中国保修文档例外条款"
+      }
+    }
+  ],
+  "fallback": {
+    "sop_branch": "ESCALATE",
+    "rule": "查不到匹配规则时，禁止推测政策，固定话术升级人工",
+    "message": "这个购买渠道/区域的售后政策我需要为您转接专员确认，绝不瞎猜。"
+  }
+}

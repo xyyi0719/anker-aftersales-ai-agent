@@ -1,63 +1,82 @@
 {
-  "openapi": "3.0.0",
+  "openapi": "3.1.0",
   "info": {
-    "title": "Anker 售后 API",
-    "description": "为 Dify Chatflow 提供订单查询/保修检查/工单创建/政策检索接口。",
+    "title": "Anker 售后 Mock API",
     "version": "1.1.0"
   },
-  "servers": [
-    {
-      "url": "http://mock-apis:8002",
-      "description": "Docker Compose 内部网络（Dify 容器内调用，决赛推荐）"
-    },
-    {
-      "url": "http://localhost:8002",
-      "description": "本地开发"
-    }
-  ],
   "paths": {
     "/api/orders/{order_id}": {
       "post": {
-        "summary": "查询订单详情",
-        "description": "根据订单号查询订单信息，包括产品型号、购买渠道、保修状态等。",
-        "operationId": "query_order",
+        "tags": [
+          "orders"
+        ],
+        "summary": "Get Order",
+        "operationId": "get_order_api_orders__order_id__post",
         "parameters": [
           {
             "name": "order_id",
             "in": "path",
             "required": true,
-            "schema": { "type": "string" },
-            "description": "订单号，例如 ANK-2024-001"
+            "schema": {
+              "type": "string",
+              "title": "Order Id"
+            }
           }
         ],
-        "requestBody": {
-          "required": false,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "region": { "type": "string", "description": "区域代码，如 CN/US/EU/JP" },
-                  "channel": { "type": "string", "description": "渠道：official/jd/tmall/douyin/dealer" }
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
           }
-        },
+        }
+      },
+      "get": {
+        "tags": [
+          "orders"
+        ],
+        "summary": "Get Order",
+        "operationId": "get_order_api_orders__order_id__get",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Order Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "订单详情",
+            "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Order" }
+                "schema": {}
               }
             }
           },
-          "404": {
-            "description": "订单不存在（可能是经销商订单）",
+          "422": {
+            "description": "Validation Error",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Error" }
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -66,32 +85,37 @@
     },
     "/api/warranty/check": {
       "post": {
-        "summary": "查询保修状态",
-        "description": "根据产品型号和购买日期判断是否在保、剩余天数、是否临期。",
-        "operationId": "check_warranty",
+        "tags": [
+          "warranty"
+        ],
+        "summary": "Check",
+        "operationId": "check_api_warranty_check_post",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["product_model", "purchase_date"],
-                "properties": {
-                  "order_id": { "type": "string" },
-                  "product_model": { "type": "string", "description": "产品型号" },
-                  "purchase_date": { "type": "string", "description": "YYYY-MM-DD" },
-                  "region": { "type": "string", "default": "CN" }
-                }
+                "$ref": "#/components/schemas/WarrantyRequest"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "保修状态",
+            "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/WarrantyStatus" }
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -100,44 +124,37 @@
     },
     "/api/tickets": {
       "post": {
-        "summary": "创建工单",
-        "description": "为用户创建售后工单，返回工单号和 SLA 时间。",
-        "operationId": "create_ticket",
+        "tags": [
+          "tickets"
+        ],
+        "summary": "Create",
+        "operationId": "create_api_tickets_post",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["product_model", "fault_type", "fault_description", "user_contact"],
-                "properties": {
-                  "order_id": { "type": "string" },
-                  "product_model": { "type": "string" },
-                  "fault_type": { "type": "string", "description": "故障类型：鼓包/不进电/无声音/不工作/..." },
-                  "fault_description": { "type": "string" },
-                  "images": {
-                    "type": "array",
-                    "items": { "type": "string" },
-                    "description": "故障图片 URL 列表"
-                  },
-                  "user_contact": { "type": "string" },
-                  "emotion_level": {
-                    "type": "string",
-                    "enum": ["normal", "upset", "angry", "complaint"],
-                    "default": "normal",
-                    "description": "用户情绪等级，影响 SLA"
-                  }
-                }
+                "$ref": "#/components/schemas/TicketRequest"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "工单创建成功",
+            "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Ticket" }
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -146,47 +163,102 @@
     },
     "/api/policy/retrieve": {
       "post": {
-        "summary": "政策检索（幻觉四道防线·出处锁）",
-        "description": "根据用户问题检索 Anker/充电类/耳机/智能家居政策条款，返回 top-K 相关条款 + 整体置信度 + answerable 标志。调用此工具后才能输出政策类回答（4.2 出处锁）。",
-        "operationId": "policy_retrieve",
+        "summary": "Retrieve",
+        "operationId": "retrieve_api_policy_retrieve_post",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": ["query"],
-                "properties": {
-                  "query": { "type": "string", "description": "用户问题或检索关键词，如'Anker 737 充电宝保修期多久'" },
-                  "top_k": { "type": "integer", "default": 5, "description": "返回前 K 条结果" },
-                  "filters": {
-                    "type": "object",
-                    "description": "元数据过滤",
-                    "properties": {
-                      "product": { "type": "string", "description": "产品型号，如 Anker 737" },
-                      "region": { "type": "string", "description": "区域：CN/US/EU/JP" },
-                      "channel": { "type": "string", "description": "渠道：official/jd/tmall/douyin/dealer" }
-                    }
-                  }
+                "$ref": "#/components/schemas/RetrieveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
                 }
               }
             }
           }
-        },
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
         "responses": {
           "200": {
-            "description": "检索结果（answerable=true 时可自由回答；false 时必须触发诚实升级）",
+            "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/PolicyRetrieveResult" }
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/healthz": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_healthz_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/chat/turn": {
+      "post": {
+        "summary": "Turn",
+        "operationId": "turn_api_chat_turn_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Turn"
               }
             }
           },
-          "503": {
-            "description": "retrieval 服务不可达",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/Error" }
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
               }
             }
           }
@@ -196,68 +268,156 @@
   },
   "components": {
     "schemas": {
-      "Order": {
-        "type": "object",
+      "HTTPValidationError": {
         "properties": {
-          "order_id": { "type": "string" },
-          "product_model": { "type": "string" },
-          "product_category": { "type": "string" },
-          "channel": { "type": "string" },
-          "region": { "type": "string" },
-          "purchase_date": { "type": "string" },
-          "warranty_status": { "type": "string" },
-          "warranty_expire_date": { "type": "string" }
-        }
-      },
-      "WarrantyStatus": {
-        "type": "object",
-        "properties": {
-          "in_warranty": { "type": "boolean" },
-          "days_remaining": { "type": "integer" },
-          "expiring_soon": { "type": "boolean" },
-          "exclusions_applied": { "type": "array", "items": { "type": "string" } },
-          "out_of_warranty_solutions": { "type": "array", "items": { "type": "string" } }
-        }
-      },
-      "Ticket": {
-        "type": "object",
-        "properties": {
-          "ticket_id": { "type": "string" },
-          "status": { "type": "string" },
-          "estimated_resolution": { "type": "string" },
-          "next_step": { "type": "string" },
-          "sla_days": { "type": "integer" }
-        }
-      },
-      "Error": {
-        "type": "object",
-        "properties": {
-          "error": { "type": "string" },
-          "message": { "type": "string" },
-          "fallback_action": { "type": "string" }
-        }
-      },
-      "PolicyRetrieveResult": {
-        "type": "object",
-        "properties": {
-          "results": {
-            "type": "array",
+          "detail": {
             "items": {
-              "type": "object",
-              "properties": {
-                "chunk_id": { "type": "string", "description": "chunk 唯一 ID，4.2 出处锁用" },
-                "text": { "type": "string" },
-                "metadata": { "type": "object" },
-                "score": { "type": "number" },
-                "sources": { "type": "array", "items": { "type": "string" } }
-              }
-            }
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "RetrieveRequest": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 8000,
+            "minLength": 1,
+            "title": "Query"
           },
-          "confidence": { "type": "number", "description": "整体置信度 0-1" },
-          "answerable": { "type": "boolean", "description": "true=可自由回答，false=必须诚实升级" },
-          "low_confidence_reason": { "type": "string", "nullable": true },
-          "fallback_message": { "type": "string", "nullable": true }
-        }
+          "top_k": {
+            "type": "integer",
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Top K",
+            "default": 3
+          },
+          "filters": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Filters"
+          },
+          "order_id": {
+            "type": "string",
+            "title": "Order Id",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "title": "RetrieveRequest"
+      },
+      "TicketRequest": {
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Conversation Id"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Summary"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conversation_id"
+        ],
+        "title": "TicketRequest"
+      },
+      "Turn": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "maxLength": 8000,
+            "title": "Query",
+            "default": ""
+          },
+          "conversation_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Conversation Id"
+          },
+          "state": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "State"
+          },
+          "extraction": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Extraction"
+          },
+          "has_image": {
+            "type": "boolean",
+            "title": "Has Image",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "conversation_id"
+        ],
+        "title": "Turn"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WarrantyRequest": {
+        "properties": {
+          "order_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Order Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "order_id"
+        ],
+        "title": "WarrantyRequest"
       }
     }
   }

@@ -6,8 +6,6 @@
     "purchase_date": "2024-03-15",
     "channel": "official",
     "region": "CN",
-    "warranty_status": "in_warranty",
-    "warranty_expires": "2025-09-15",
     "dealer": null,
     "buyer_email": "user001@example.com"
   },
@@ -18,8 +16,6 @@
     "purchase_date": "2022-06-20",
     "channel": "official",
     "region": "CN",
-    "warranty_status": "out_of_warranty",
-    "warranty_expires": "2023-12-20",
     "dealer": null,
     "buyer_email": "user002@example.com"
   },
@@ -30,8 +26,6 @@
     "purchase_date": "2024-09-01",
     "channel": "jd",
     "region": "CN",
-    "warranty_status": "expiring_soon",
-    "warranty_expires": "2026-03-01",
     "dealer": null,
     "buyer_email": "user003@example.com"
   },
@@ -42,8 +36,6 @@
     "purchase_date": "2024-07-10",
     "channel": "tmall",
     "region": "CN",
-    "warranty_status": "in_warranty",
-    "warranty_expires": "2026-01-10",
     "dealer": null,
     "buyer_email": "user004@example.com"
   },
@@ -54,8 +46,6 @@
     "purchase_date": "2024-05-22",
     "channel": "official",
     "region": "CN",
-    "warranty_status": "in_warranty",
-    "warranty_expires": "2025-05-22",
     "dealer": null,
     "buyer_email": "user005@example.com"
   },
@@ -66,8 +56,6 @@
     "purchase_date": "2023-01-15",
     "channel": "douyin",
     "region": "CN",
-    "warranty_status": "out_of_warranty",
-    "warranty_expires": "2024-01-15",
     "dealer": null,
     "buyer_email": "user006@example.com"
   },
@@ -78,8 +66,6 @@
     "purchase_date": "2024-02-08",
     "channel": "official",
     "region": "CN",
-    "warranty_status": "in_warranty",
-    "warranty_expires": "2025-02-08",
     "dealer": null,
     "buyer_email": "user007@example.com"
   },
@@ -90,8 +76,6 @@
     "purchase_date": "2024-08-30",
     "channel": "official",
     "region": "US",
-    "warranty_status": "in_warranty",
-    "warranty_expires": "2026-02-28",
     "dealer": null,
     "buyer_email": "user008@example.com"
   },
@@ -102,8 +86,6 @@
     "purchase_date": "2024-04-12",
     "channel": "dealer",
     "region": "CN",
-    "warranty_status": "dealer_order",
-    "warranty_expires": "2025-10-12",
     "dealer": "深圳鑫达电子",
     "buyer_email": "user009@example.com"
   },
@@ -114,8 +96,6 @@
     "purchase_date": "2024-06-18",
     "channel": "dealer",
     "region": "CN",
-    "warranty_status": "dealer_order",
-    "warranty_expires": "2025-06-18",
     "dealer": "广州声海音响",
     "buyer_email": "user010@example.com"
   },
@@ -126,8 +106,6 @@
     "purchase_date": "2024-09-20",
     "channel": "official",
     "region": "CN",
-    "warranty_status": "in_warranty",
-    "warranty_expires": "2026-03-20",
     "dealer": null,
     "buyer_email": "user011@example.com"
   },
@@ -138,8 +116,6 @@
     "purchase_date": "2024-10-05",
     "channel": "official",
     "region": "EU",
-    "warranty_status": "in_warranty",
-    "warranty_expires": "2026-04-05",
     "dealer": null,
     "buyer_email": "user012@example.com"
   },
@@ -150,8 +126,6 @@
     "purchase_date": "2024-05-30",
     "channel": "official",
     "region": "CN",
-    "warranty_status": "in_warranty",
-    "warranty_expires": "2025-05-30",
     "dealer": null,
     "buyer_email": "user013@example.com"
   },
@@ -162,8 +136,6 @@
     "purchase_date": "2022-12-01",
     "channel": "official",
     "region": "CN",
-    "warranty_status": "out_of_warranty",
-    "warranty_expires": "2024-06-01",
     "dealer": null,
     "buyer_email": "user014@example.com"
   },
@@ -174,8 +146,6 @@
     "purchase_date": "2024-07-25",
     "channel": "tmall",
     "region": "CN",
-    "warranty_status": "in_warranty",
-    "warranty_expires": "2025-07-25",
     "dealer": null,
     "buyer_email": "user015@example.com"
   },
@@ -186,8 +156,6 @@
     "purchase_date": "2024-11-12",
     "channel": "official",
     "region": "JP",
-    "warranty_status": "in_warranty",
-    "warranty_expires": "2026-05-12",
     "dealer": null,
     "buyer_email": "user016@example.com"
   },
@@ -198,8 +166,6 @@
     "purchase_date": "2024-09-25",
     "channel": "dealer",
     "region": "CN",
-    "warranty_status": "dealer_order",
-    "warranty_expires": "2026-03-25",
     "dealer": "上海万邦数码",
     "buyer_email": "user017@example.com"
   },
@@ -210,8 +176,6 @@
     "purchase_date": "2024-03-30",
     "channel": "official",
     "region": "CN",
-    "warranty_status": "in_warranty",
-    "warranty_expires": "2025-03-30",
     "dealer": null,
     "buyer_email": "user018@example.com"
   },
@@ -222,8 +186,6 @@
     "purchase_date": "2024-08-15",
     "channel": "official",
     "region": "CN",
-    "warranty_status": "in_warranty",
-    "warranty_expires": "2026-02-15",
     "dealer": null,
     "buyer_email": "user019@example.com"
   },
@@ -234,9 +196,31 @@
     "purchase_date": "2024-10-20",
     "channel": "jd",
     "region": "CN",
-    "warranty_status": "in_warranty",
-    "warranty_expires": "2025-10-20",
     "dealer": null,
     "buyer_email": "user020@example.com"
+  },
+  {
+    "order_id": "DEMO-US-001",
+    "product_model": "Anker 737",
+    "product_category": "power_bank",
+    "region": "US",
+    "channel": "official_site",
+    "purchase_date": "2026-08-15"
+  },
+  {
+    "order_id": "DEMO-AMZ-001",
+    "product_model": "Anker 737",
+    "product_category": "power_bank",
+    "region": "US",
+    "channel": "amazon",
+    "purchase_date": "2026-08-20"
+  },
+  {
+    "order_id": "DEMO-CN-001",
+    "product_model": "Anker 737",
+    "product_category": "power_bank",
+    "region": "CN",
+    "channel": "tmall_jd",
+    "purchase_date": "2026-09-01"
   }
 ]

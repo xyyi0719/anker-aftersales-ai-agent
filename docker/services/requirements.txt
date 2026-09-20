@@ -1,11 +1,4 @@
-# Anker Mock APIs + Retrieval services
-# One Dockerfile builds both into one image; CMD picks which one to run.
-fastapi==0.110.0
-uvicorn[standard]==0.27.1
-pydantic==2.6.1
-python-dotenv==1.0.1
-httpx==0.27.0
-numpy==1.26.4
-faiss-cpu==1.8.0
-rank-bm25==0.2.2
-jieba==0.42.1
+fastapi==0.115.12
+uvicorn==0.34.2
+pydantic==2.11.4
+httpx==0.28.1
