@@ -1,0 +1,69 @@
+{
+  "_comment": "政策路由表示例（队长块1.5 待替换为真实数据）",
+  "version": "0.1 (placeholder)",
+  "rules": [
+    {
+      "id": "rule-1",
+      "match": {
+        "channel": "official",
+        "region": "CN",
+        "warranty_status": "in_warranty"
+      },
+      "action": "IN_WARRANTY_FULL",
+      "description": "官方+中国大陆+在保：全免费保修/换新"
+    },
+    {
+      "id": "rule-2",
+      "match": {
+        "channel": "official",
+        "region": "CN",
+        "warranty_status": "out_of_warranty"
+      },
+      "action": "OUT_OF_WARRANTY_PAID",
+      "description": "官方+中国大陆+过保：付费维修/以旧换新"
+    },
+    {
+      "id": "rule-3",
+      "match": {
+        "channel": ["jd", "tmall", "douyin"],
+        "region": "CN",
+        "warranty_status": "in_warranty"
+      },
+      "action": "IN_WARRANTY_FULL",
+      "description": "电商渠道+在保：等同官方保修"
+    },
+    {
+      "id": "rule-4",
+      "match": {
+        "channel": "dealer",
+        "region": "CN"
+      },
+      "action": "DEALER_LOOKUP",
+      "description": "经销商订单：触发经销商名录匹配",
+      "fallback_action": "ESCALATE_TO_HUMAN",
+      "fallback_reason": "经销商订单资质需人工核实"
+    },
+    {
+      "id": "rule-5",
+      "match": {
+        "region": ["US", "EU", "JP"],
+        "warranty_status": "in_warranty"
+      },
+      "action": "IN_WARRANTY_FULL",
+      "description": "海外在保：走当地售后"
+    },
+    {
+      "id": "rule-6",
+      "match": {
+        "warranty_status": "expiring_soon"
+      },
+      "action": "IN_WARRANTY_URGENT",
+      "description": "临期：提示用户尽快申请",
+      "add_message": "您的保修将在 {days_remaining} 天内到期，建议尽快申请售后。"
+    }
+  ],
+  "_fallback": {
+    "if_no_match": "ESCALATE_TO_HUMAN",
+    "message": "抱歉，您的订单情况我暂时无法判断，请转人工核实。"
+  }
+}

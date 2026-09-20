@@ -1,0 +1,1160 @@
+version: 0.7.0
+kind: app
+app:
+  name: Anker 售后 AI 客服
+  description: 面向真实售后场景的 AI 智能客服 Agent。具备意图识别、情绪分级、产品消歧、视觉跳级、幻觉四道防线、转人工等能力。
+  mode: advanced-chat
+  icon: 🤖
+  icon_background: '#E4FBCC'
+  icon_type: emoji
+  use_icon_as_answer_icon: false
+dependencies: []
+workflow:
+  conversation_variables: []
+  environment_variables:
+  - name: tool_results
+    value: ''
+    value_type: string
+    description: tool_dispatch 注入的工具调用结果 JSON 字符串
+  - name: fault_tree_anker737
+    value_type: string
+    value: "{\n  \"product\": \"Anker 737 (A1289)\",\n  \"issue\": \"charge_failure\",\n  \"entry\": \"n1\",\n  \"nodes\": {\n    \"n1\": {\n      \"ask\": \"请问是充电宝自己充不进电，还是它没法给您的设备充电？\",\n      \"branches\": { \"self_charge\": \"n2\", \"output\": \"n6\", \"unclear\": \"n1\" }\n    },\n    \"n2\": {\n      \"ask\": \"换一个墙插、一根确认完好的数据线和充电头试过吗？\",\n      \"vision_skip\": true,\n      \"branches\": { \"yes\": \"n3\", \"no\": \"c_cable_charger\", \"partial\": \"c_cable_charger\" }\n    },\n    \"n3\": {\n      \"ask\": \"充电时屏幕或指示灯有反应吗？（比如亮屏、显示百分比）\",\n      \"vision_skip\": true,\n      \"branches\": { \"no_response\": \"n4\", \"slow_or_wrong\": \"c_wattage\", \"error_code\": \"c_error_check\" }\n    },\n    \"n4\": {\n      \"ask\": \"我们试一次复位：用一根线把充电宝的输入口和输出口短接 3–5 秒，然后再充电。有反应了吗？\",\n      \"branches\": { \"recovered\": \"c_resolved\", \"still_dead\": \"c_battery_hw\" }\n    },\n    \"n6\": {\n      \"ask\": \"换一根确认完好的线、再换一个设备试过吗？\",\n      \"branches\": { \"yes\": \"n7\", \"no\": \"c_cable\" }\n    },\n    \"n7\": {\n      \"ask\": \"是只有某一个口不行（比如 USB-A 断续），还是所有口都不行？\",\n      \"branches\": { \"one_port\": \"c_port_hw\", \"all_ports\": \"n4\" }\n    }\n  },\n  \"conclusions\": {\n    \"c_cable_charger\": { \"action\": \"rag_answer\", \"solution\": \"先排除线材/充电头/墙插（对应官方 FAQ F1）\", \"fault_type\": \"cable_charger_fault\" },\n    \"c_cable\": { \"action\": \"rag_answer\", \"solution\": \"先换确认完好的线材交叉验证（FAQ F2）\", \"fault_type\": \"cable_fault\" },\n    \"c_wattage\": { \"action\": \"rag_answer\", \"solution\": \"功率由智能算法动态调整，以实际充满时间为准（FAQ F12）\", \"fault_type\": \"wattage_mismatch\" },\n    \"c_error_check\": { \"action\": \"forced_retrieve\", \"solution\": \"强制检索错误代码/召回信息，检索不到即诚实升级\", \"fault_type\": \"error_code\" },\n    \"c_battery_hw\": { \"action\": \"check_warranty\", \"solution\": \"复位无效判定硬件缺陷（FAQ F3），进入保修核验\", \"fault_type\": \"battery_hw_fault\" },\n    \"c_port_hw\": { \"action\": \"check_warranty\", \"solution\": \"单口异常属硬件问题（FAQ F3/A口断续），进入保修核验\", \"fault_type\": \"port_hw_fault\" },\n    \"c_resolved\": { \"action\": \"close_ticket\", \"solution\": \"复位恢复，建议观察 48 小时\", \"fault_type\": \"resolved\" }\n  }\n}\n"
+  - name: fault_tree_soundcore
+    value_type: string
+    value: "{\n  \"product\": \"Soundcore 耳机\",\n  \"issue\": \"one_side_silent\",\n  \"entry\": \"n1\",\n  \"nodes\": {\n    \"n1\": {\n      \"ask\": \"请问是单边没声音，还是两边都连不上/没声音？\",\n      \"branches\": { \"one_side\": \"n2\", \"both\": \"n5\", \"pairing\": \"n6\" }\n    },\n    \"n2\": {\n      \"ask\": \"先做个快速检查：耳机触点上的保护膜撕掉了吗？放回充电盒时能看到充电指示吗？\",\n      \"vision_skip\": true,\n      \"branches\": { \"film_removed_charging\": \"n3\", \"film_or_no_charge\": \"c_film_charge\", \"unclear\": \"n3\" }\n    },\n    \"n3\": {\n      \"ask\": \"用酒精棉签清洁一下出声孔的金属网（耳帽下面），再换一个稍大的耳帽试试，有改善吗？\",\n      \"branches\": { \"yes\": \"c_resolved\", \"no\": \"n4\" }\n    },\n    \"n4\": {\n      \"ask\": \"检查下手机的音量平衡设置（iPhone：设置-辅助功能-音频/视觉-平衡；安卓类似），是居中的吗？\",\n      \"branches\": { \"centered\": \"n7\", \"adjusted_fixed\": \"c_resolved\" }\n    },\n    \"n5\": {\n      \"ask\": \"耳机放回充电盒充 1 小时后取出，有反应吗？\",\n      \"branches\": { \"works\": \"c_resolved\", \"no\": \"n7\" }\n    },\n    \"n6\": {\n      \"ask\": \"请在手机蓝牙里删除配对记录并关闭蓝牙，然后重置耳机（放入盒中开盖，长按盒上按键 10 秒），再重新配对。成功了吗？\",\n      \"branches\": { \"yes\": \"c_resolved\", \"no\": \"n7\" }\n    },\n    \"n7\": {\n      \"ask\": \"最后一步：换另一台手机/设备连接试试，问题还在吗？\",\n      \"branches\": { \"follows_device\": \"c_hw_fault\", \"device_specific\": \"c_device_issue\" }\n    }\n  },\n  \"conclusions\": {\n    \"c_film_charge\": { \"action\": \"rag_answer\", \"solution\": \"撕膜+充电 1 小时（官方 S2）\", \"fault_type\": \"contact_or_power\" },\n    \"c_resolved\": { \"action\": \"close_ticket\", \"solution\": \"已解决，建议观察\", \"fault_type\": \"resolved\" },\n    \"c_device_issue\": { \"action\": \"rag_answer\", \"solution\": \"问题出在设备端，非耳机故障\", \"fault_type\": \"device_side\" },\n    \"c_hw_fault\": { \"action\": \"check_warranty\", \"solution\": \"交叉验证后仍异常，疑似硬件故障，进入保修核验\", \"fault_type\": \"earbud_hw_fault\" }\n  }\n}\n"
+  - name: policy_routing
+    value_type: string
+    value: "{\n  \"dimensions\": [\"channel\", \"region\", \"category\"],\n  \"rules\": [\n    {\n      \"match\": { \"channel\": \"official_site\", \"region\": \"US\", \"category\": \"power_bank\" },\n      \"policy\": {\n        \"warranty_months\": 24,\n        \"return_window_days\": 30,\n        \"return_rule\": \"30 天无理由退货：需全配件+原包装，非质量原因买家承担运费，退款到仓验收后 3-5 个工作日原路退回\",\n        \"sop_branch\": \"US_OFFICIAL_RMA\",\n        \"source\": \"anker.com warranty timeline + 30-Day Money-Back FAQ\"\n      }\n    },\n    {\n      \"match\": { \"channel\": \"amazon\", \"region\": \"US\", \"category\": \"power_bank\" },\n      \"policy\": {\n        \"warranty_months\": 24,\n        \"return_window_days\": 30,\n        \"return_rule\": \"退款联系亚马逊平台办理；保修由 Anker 官方承担\",\n        \"sop_branch\": \"US_AMAZON_SPLIT\",\n        \"source\": \"官方 FAQ：非官网购买的退款需联系零售商\"\n      }\n    },\n    {\n      \"match\": { \"channel\": \"tmall_jd\", \"region\": \"CN\", \"category\": \"power_bank\" },\n      \"policy\": {\n        \"warranty_months\": 18,\n        \"return_window_days\": 7,\n        \"return_rule\": \"三包：7 日内性能故障可退可换；8-15 日可换；16 日-1 年免费修（同故障两次修不好可换）；需发票+三包凭证\",\n        \"sop_branch\": \"CN_THREE_GUARANTEES\",\n        \"source\": \"Anker 中国三包政策文档\"\n      }\n    },\n    {\n      \"match\": { \"channel\": \"tmall_jd\", \"region\": \"CN\", \"category\": \"earbuds\" },\n      \"policy\": {\n        \"warranty_months\": 18,\n        \"return_window_days\": 7,\n        \"return_rule\": \"同 CN 三包规则\",\n        \"sop_branch\": \"CN_THREE_GUARANTEES\",\n        \"source\": \"Anker 中国三包政策文档\"\n      }\n    },\n    {\n      \"match\": { \"channel\": \"official_site\", \"region\": \"EU\", \"category\": \"earbuds\" },\n      \"policy\": {\n        \"warranty_months\": 24,\n        \"return_window_days\": 30,\n        \"return_rule\": \"欧盟法定 2 年保修优先于品牌承诺\",\n        \"sop_branch\": \"EU_STATUTORY\",\n        \"source\": \"欧盟消费者法定保修通则\"\n      }\n    },\n    {\n      \"match\": { \"channel\": \"any\", \"region\": \"CN\", \"category\": \"any\", \"condition\": \"non_cn_sold\" },\n      \"policy\": {\n        \"sop_branch\": \"REGION_LOCKED\",\n        \"return_rule\": \"非中国大陆销售的 Anker 产品不享受中国大陆三包服务\",\n        \"source\": \"Anker 中国保修文档例外条款\"\n      }\n    }\n  ],\n  \"fallback\": {\n    \"sop_branch\": \"ESCALATE\",\n    \"rule\": \"查不到匹配规则时，禁止推测政策，固定话术升级人工\",\n    \"message\": \"这个购买渠道/区域的售后政策我需要为您转接专员确认，绝不瞎猜。\"\n  }\n}\n"
+  - name: transfer_summary
+    value_type: string
+    value: ''
+    description: transfer_handler 生成的结构化交接摘要（JSON 字符串），供前端面板展示
+  - name: emotion_state
+    value_type: string
+    value: ''
+    description: emotion_node 输出（JSON 字符串），含 emotion_level/emotion_confidence，供 handler 三级联动
+  rag_pipeline_variables: []
+  features:
+    file_upload:
+      allowed_file_extensions:
+      - .JPG
+      - .JPEG
+      - .PNG
+      allowed_file_types:
+      - image
+      allowed_file_upload_methods:
+      - local_file
+      - remote_url
+      enabled: true
+      fileUploadConfig:
+        attachment_image_file_size_limit: 2
+        audio_file_size_limit: 50
+        batch_count_limit: 5
+        file_size_limit: 15
+        file_upload_limit: 50
+        image_file_batch_limit: 10
+        image_file_size_limit: 10
+        single_chunk_attachment_limit: 10
+        video_file_size_limit: 100
+        workflow_file_upload_limit: 10
+      image:
+        enabled: true
+        number_limits: 3
+        transfer_methods:
+        - local_file
+        - remote_url
+      number_limits: 3
+    opening_statement: 您好，这里是 Anker 售后 AI 客服。我能帮您处理产品故障、查询保修、申请退换货。请告诉我您遇到的情况。
+    retriever_resource:
+      enabled: true
+    sensitive_word_avoidance:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    suggested_questions:
+    - 我的产品保修期多久？
+    - 我想申请退货
+    - 我的充电宝充不进电了
+    suggested_questions_after_answer:
+      enabled: true
+    text_to_speech:
+      enabled: false
+      language: ''
+      voice: ''
+  graph:
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.7
+    nodes:
+    - id: start_node
+      type: custom
+      position:
+        x: 114.61618082003986
+        y: 282
+      positionAbsolute:
+        x: 114.61618082003986
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 242
+      zIndex: 0
+      height: 116
+      data:
+        desc: 接收用户发送的消息和文件，作为每一轮对话的起点。
+        selected: false
+        title: 用户输入
+        type: start
+        variables: []
+    - id: emotion_node
+      type: custom
+      position:
+        x: 380
+        y: 282
+      positionAbsolute:
+        x: 380
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 242
+      zIndex: 0
+      height: 131
+      data:
+        type: code
+        title: 情绪识别
+        desc: 确定性关键词情绪识别（V4.2 P1 升级）
+        code: "def main(query: str) -> dict:\n    \"\"\"确定性情绪识别 - 不依赖 LLM\"\"\"\n    import re, json\n\n    q = query.strip()\n\n    # complaint 等级（P0）- 法律/媒体曝光\n    complaint_kw = ['315', '工商', '起诉', '曝光', '12315', '律师', '差评', '黑猫', '消协', '媒体', '打官司', '维权', '法院', '起诉']\n    # angry 等级（P1）- 强烈负面情绪 + 紧急诉求\n    angry_kw = ['气死', '太过分', '忍无可忍', '气炸', '怒', '投诉', '无良', '骗子', '垃圾', '受不了', '救命', '愤怒']\n    # upset 等级 - 中等负面 + 紧急求助\n    upset_kw = ['失望', '不应该', '烦', '郁闷', '糟心', '恼火', '不好', '焦虑', '烦躁', '崩溃', '无助', '糟糕']\n    # 紧急求助类\n    urgent_kw = ['很急', '着急', '急死', '快急', '紧急', '帮帮我', '怎么办']\n    # 严重故障类\n    broken_kw = ['完全不工作', '彻底不工作', '坏了', '不工作了', '用不了', '不能用了', '罢工', '故障']\n    # 安全类（P0 angry 升级）\n    safety_kw = ['爆炸', '自燃', '烧了', '烫伤', '焦味', '冒烟', '起火', '漏液', '鼓包']\n\n    matched = []\n\n    # P0 complaint\n    for kw in complaint_kw:\n        if kw in q:\n            matched.append(('complaint', kw))\n            break\n\n    # P0 安全 angry\n    if not matched:\n        for kw in safety_kw:\n            if kw in q:\n                matched.append(('angry', kw))\n                break\n\n    # angry（强烈负面 + 紧急组合）\n    if not matched:\n        has_angry = any(kw in q for kw in angry_kw)\n        has_broken = any(kw in q for kw in broken_kw)\n        has_urgent = any(kw in q for kw in urgent_kw)\n        if has_angry and (has_broken or has_urgent):\n            for kw in angry_kw:\n                if kw in q:\n                    matched.append(('angry', kw))\n                    break\n        elif has_broken and has_urgent:\n            matched.append(('angry', '完全坏+紧急'))\n\n    # upset（中等等级）\n    if not matched:\n        has_upset = any(kw in q for kw in upset_kw)\n        has_broken = any(kw in q for kw in broken_kw)\n        has_urgent = any(kw in q for kw in urgent_kw)\n        if has_upset:\n            for kw in upset_kw:\n                if kw in q:\n                    matched.append(('upset', kw))\n                    break\n        elif has_broken or has_urgent:\n            matched.append(('upset', '故障或紧急求助'))\n\n    if not matched:\n        matched.append(('normal', ''))\n\n    level, trigger = matched[0]\n    return {\n        'emotion_level': level,\n        'emotion_confidence': 0.95,\n        'emotion_trigger': trigger,\n        'emotion_text': json.dumps({'level': level, 'confidence': 0.95, 'keywords': [trigger] if trigger else [], 'trigger': trigger}, ensure_ascii=False)\n    }\n"
+        code_language: python3
+        variables:
+        - value_selector:
+          - sys
+          - query
+          variable: query
+        outputs:
+          emotion_level:
+            type: string
+            children: null
+          emotion_confidence:
+            type: number
+            children: null
+          emotion_trigger:
+            type: string
+            children: null
+          emotion_text:
+            type: string
+            children: null
+    - id: intent_classifier
+      type: custom
+      position:
+        x: 680
+        y: 282
+      positionAbsolute:
+        x: 680
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 242
+      zIndex: 0
+      height: 98
+      data:
+        desc: 意图分类 - Python 关键词匹配（确定性，给 LLM 提供 context 注入）
+        title: 意图分类
+        type: code
+        code_language: python3
+        code: "def main(query: str) -> dict:\n    \"\"\"V4.2 P0: 多轮对话支持 - S1 Pro 消歧 + 消歧回复识别\"\"\"\n    import re\n\n    q = query.strip()\n\n    # P0-2: S1 Pro 触发产品消歧（首次问）\n    if re.search(r'S1\\s*Pro', q, re.IGNORECASE):\n        return {'intent_id': 'transfer_human', 'intent_name': '产品歧义反问', 'matched_keyword': 'S1 Pro 歧义', 'confidence': 0.99}\n\n    # P0-2: 消歧回复识别 - 用户回复「扫地机器人」「吸奶器」「1」「2」等\n    # 这些是上一轮 S1 Pro 反问的延续，路由到 troubleshooting\n    disambig_reply_kw = ['扫地机器人', '吸奶器', '扫地机', 'breast pump', 'breastpump', 'robovac']\n    if q in ['1', '2', '一', '二', '扫地', '吸奶']:\n        return {'intent_id': 'troubleshooting', 'intent_name': '消歧后故障排查', 'matched_keyword': '消歧回复', 'confidence': 0.95}\n    if any(kw in q for kw in disambig_reply_kw) and len(q) <= 20:\n        return {'intent_id': 'troubleshooting', 'intent_name': '消歧后故障排查', 'matched_keyword': '消歧回复', 'confidence': 0.95}\n\n    \"\"\"V4.2 P0: 多轮对话支持 - S1 Pro 消歧 + 消歧回复识别\"\"\"\n    import re\n\n    q = query.strip()\n\n    # P0-2: S1 Pro 触发产品消歧（首次问）\n    if re.search(r'S1\\s*Pro', q, re.IGNORECASE):\n        return {'intent_id': 'transfer_human', 'intent_name': '产品歧义反问', 'matched_keyword': 'S1 Pro 歧义', 'confidence': 0.99}\n\n    # P0-2: 消歧回复识别 - 用户回复「扫地机器人」「吸奶器」「1」「2」等\n    # 这些是上一轮 S1 Pro 反问的延续，路由到 troubleshooting\n    disambig_reply_kw = ['扫地机器人', '吸奶器', '扫地机', 'breast pump', 'breastpump', 'robovac']\n    if q in ['1', '2', '一', '二', '扫地', '吸奶']:\n        return {'intent_id': 'troubleshooting', 'intent_name': '消歧后故障排查', 'matched_keyword': '消歧回复', 'confidence': 0.95}\n    if any(kw in q for kw in disambig_reply_kw) and len(q) <= 20:\n        return {'intent_id': 'troubleshooting', 'intent_name': '消歧后故障排查', 'matched_keyword': '消歧回复', 'confidence': 0.95}\n\n    \"\"\"V4.2 P0: S1 Pro 强制路由到 transfer_handler（在反问阶段）\"\"\"\n    import re\n    # P0: S1 Pro 触发 product_disambiguation，路由到 transfer_handler 反问\n    if re.search(r'S1\\s*Pro', query, re.IGNORECASE):\n        return {'intent_id': 'transfer_human', 'intent_name': '产品歧义反问', 'matched_keyword': 'S1 Pro 歧义', 'confidence': 0.99}\n    q = query.strip()\n    complaint_kw = ['315','工商','起诉','曝光','律师','维权','打官司','黑猫','12315','消协','媒体']\n    transfer_kw  = ['经理','人工','主管','老板','真人','领导','客服','找人']\n    return_kw    = ['退货','换货','退款','不要了','退掉','退一','换新','7天','七天']\n    trouble_kw   = ['不吸','鼓包','漏液','起火','冒烟','充不进','坏了','用不了','不动','不工作','故障','死机','掉电','接触不良','异响','发热','发烫','不亮','不响','不转','无法开机','开不了机','充电慢','无法充电','没反应','不识别']\n    inquiry_kw   = ['怎么','多久','什么时候','能否','可以','保修','教程','兼容','支持','什么是','区别','怎样','如何','配置','说明','说明书','能不能','在哪里','在哪','能用吗','召回','型号','多少钱','价格']\n    matched=None; intent_id='out_of_scope'; intent_name='兜底'\n    for kw in complaint_kw:\n        if kw in q: matched=kw; intent_id='complaint'; intent_name='投诉'; break\n    if not matched:\n        for kw in transfer_kw:\n            if kw in q: matched=kw; intent_id='transfer_human'; intent_name='转人工'; break\n    if not matched:\n        for kw in return_kw:\n            if kw in q: matched=kw; intent_id='return_or_exchange'; intent_name='退换'; break\n    if not matched:\n        for kw in trouble_kw:\n            if kw in q: matched=kw; intent_id='troubleshooting'; intent_name='故障报修'; break\n    if not matched:\n        for kw in inquiry_kw:\n            if kw in q: matched=kw; intent_id='inquiry'; intent_name='咨询'; break\n    return {'intent_id':intent_id,'intent_name':intent_name,'matched_keyword':matched or 'none','confidence':0.95 if matched else 0.50}\n"
+        variables:
+        - variable: query
+          value_selector:
+          - sys
+          - query
+          value_type: string
+        outputs:
+          intent_id:
+            type: string
+            children: null
+          intent_name:
+            type: string
+            children: null
+          matched_keyword:
+            type: string
+            children: null
+          confidence:
+            type: number
+            children: null
+        selected: false
+        retry_config:
+          enabled: false
+          max_retries: 1
+          retry_interval: 1000
+          exponential_backoff:
+            enabled: false
+            multiplier: 2
+            max_interval: 10000
+        error_strategy: default-value
+        default_value: []
+    - id: intent_node
+      type: custom
+      position:
+        x: 680
+        y: 282
+      positionAbsolute:
+        x: 680
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 242
+      zIndex: 0
+      height: 131
+      data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: 将用户消息分类到 6 类之一
+        memory:
+          query_prompt_template: '{{#sys.query#}}
+
+
+            {{#sys.files#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: true
+            size: 10
+        model:
+          completion_params: {}
+          mode: chat
+          name: minimax-m3
+          provider: langgenius/minimax/minimax
+        prompt_template:
+        - edition_type: basic
+          id: 10000000-0000-0000-0000-000000000002
+          role: system
+          text: '你是意图分类器。把用户消息分到 6 类之一：
+
+            1. troubleshooting（故障报修）：用户描述设备故障
+
+            2. inquiry（咨询）：询问政策/方法/参数
+
+            3. return_or_exchange（退换）：申请退货或换货
+
+            4. transfer_human（转人工）：要求人工服务
+
+            5. complaint（投诉）：含 315/工商/起诉/曝光/律师/维权
+
+            6. out_of_scope（兜底）：闲聊/其他品牌/售前
+
+
+            边界规则：
+
+            - 故障 vs 咨询："鼓包了怎么办"=inquiry（问方法）；"鼓包了还能用吗"=troubleshooting（判断故障）
+
+            - 情绪读取 {{#emotion_node.emotion_level#}}，不改变主意图
+
+            - 含 315/工商/起诉 → 强制 complaint
+
+
+            【输出硬性规定】必须只输出一行裸 JSON，绝对禁止：
+
+            - 禁止使用 markdown 代码块（不要 ``` 或 ```json）
+
+            - 禁止任何解释、前后缀文字
+
+            - 第一个字符必须是 {，最后一个必须是 }
+
+
+            格式（严格遵守）：
+
+            {"intent": "<6类之一>", "emotion": "{{#emotion_node.emotion_level#}}", "confidence": 0.0-1.0, "reasoning": "<一句话>"}
+
+
+            示例（直接照抄格式，不要任何额外字符）：
+
+            {"intent":"troubleshooting","emotion":"{{#emotion_node.emotion_level#}}","confidence":0.95,"reasoning":"用户描述充电宝故障"}
+
+            '
+        selected: false
+        structured_output_enabled: false
+        title: 意图分类
+        type: llm
+        vision:
+          enabled: false
+    - id: router_node
+      type: custom
+      position:
+        x: 980
+        y: 282
+      positionAbsolute:
+        x: 980
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 242
+      zIndex: 0
+      height: 304
+      data:
+        desc: 'V4.1.3: question-classifier + 极简 prompt 强制单行 JSON 输出（避免 markdown 包装导致 line 4 Extra data）'
+        memory:
+          query_prompt_template: '{{#sys.query#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: false
+            size: 10
+        model:
+          completion_params: {}
+          mode: chat
+          name: minimax-m3
+          provider: langgenius/minimax/minimax
+        prompt_template:
+        - edition_type: basic
+          id: 10000000-0000-0000-0000-000000000003
+          role: system
+          text: '你是分类路由器。从 6 类中选最匹配的一个：troubleshooting/inquiry/return_or_exchange/transfer_human/complaint/out_of_scope。
+
+            只输出一行 JSON（一对花括号，无换行无 markdown 无前后缀）：{"category_id":"<6类之一>"}
+
+            '
+        selected: false
+        structured_output_enabled: false
+        title: 意图路由
+        type: question-classifier
+        vision:
+          enabled: false
+        query_variable_selector:
+        - sys
+        - query
+        classes:
+        - id: troubleshooting
+          name: 故障报修
+        - id: inquiry
+          name: 咨询
+        - id: return_or_exchange
+          name: 退换
+        - id: transfer_human
+          name: 转人工
+        - id: complaint
+          name: 投诉
+        - id: out_of_scope
+          name: 兜底
+        _targetBranches:
+        - id: troubleshooting
+          name: 故障报修
+        - id: inquiry
+          name: 咨询
+        - id: return_or_exchange
+          name: 退换
+        - id: transfer_human
+          name: 转人工
+        - id: complaint
+          name: 投诉
+        - id: out_of_scope
+          name: 兜底
+    - id: tool_dispatch
+      type: custom
+      position:
+        x: 980
+        y: 760
+      positionAbsolute:
+        x: 980
+        y: 760
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 244
+      zIndex: 0
+      height: 90
+      data:
+        desc: 自动检测 query 中的订单号/政策词，调 mock-apis HTTP API，结果存到 env.tool_results
+        code: "def main(query: str) -> dict:\n    \"\"\"V4.2 P0: S1 Pro 触发产品歧义，跳过所有工具调用\"\"\"\n    import json, urllib.request, urllib.error, re\n\n    # P0: S1 Pro 歧义前置判定（不让 policy_retrieve 误触）\n    if re.search(r\"S1\\s*Pro\", query, re.IGNORECASE):\n        return {\"tool_results\": json.dumps({\n            \"is_product_ambiguous\": True,\n            \"disambiguation_candidates\": [\"eufy 吸奶器 S1 Pro\", \"eufy RoboVac 扫地机器人 S1 Pro\"],\n            \"tools_called\": [],\n            \"results\": {}\n        }, ensure_ascii=False)}\n\n    results = {\"query\": query, \"tools_called\": [], \"results\": {}}\n\n    order_match = re.search(r'ANK-2024-\\d{3}', query)\n    if order_match:\n        order_id = order_match.group(0)\n        try:\n            req = urllib.request.Request(\n                'http://mock-apis:8002/api/orders/' + order_id,\n                method='POST',\n                headers={'Content-Type': 'application/json'},\n                data=json.dumps({\"order_id\": order_id}).encode()\n            )\n            with urllib.request.urlopen(req, timeout=10) as resp:\n                results[\"results\"][\"query_order\"] = json.loads(resp.read().decode())\n                results[\"tools_called\"].append(\"query_order\")\n        except Exception as e:\n            results[\"results\"][\"query_order\"] = {\"error\": str(e)}\n\n        try:\n            req = urllib.request.Request(\n                'http://mock-apis:8002/api/warranty/check',\n                method='POST',\n                headers={'Content-Type': 'application/json'},\n                data=json.dumps({\n                    \"order_id\": order_id,\n                    \"purchase_date\": \"2024-01-15\",\n                    \"product_model\": \"Anker 737\"\n                }).encode()\n            )\n            with urllib.request.urlopen(req, timeout=10) as resp:\n                results[\"results\"][\"check_warranty\"] = json.loads(resp.read().decode())\n                results[\"tools_called\"].append(\"check_warranty\")\n        except Exception as e:\n            results[\"results\"][\"check_warranty\"] = {\"error\": str(e)}\n\n    policy_keywords = [\"保修\", \"退换\", \"召回\", \"三包\", \"售后\", \"维修\", \"更换\"]\n    if any(kw in query for kw in policy_keywords):\n        try:\n            req = urllib.request.Request(\n                'http://mock-apis:8002/api/policy/retrieve',\n                method='POST',\n                headers={'Content-Type': 'application/json'},\n                data=json.dumps({\n                    \"query\": query,\n                    \"top_k\": 3,\n                    \"filters\": {}\n                }).encode()\n            )\n            with urllib.request.urlopen(req, timeout=10) as resp:\n                results[\"results\"][\"policy_retrieve\"] = json.loads(resp.read().decode())\n                results[\"tools_called\"].append(\"policy_retrieve\")\n        except Exception as e:\n            results[\"results\"][\"policy_retrieve\"] = {\"error\": str(e)}\n\n    return {\n        \"tool_results\": json.dumps(results, ensure_ascii=False)\n    }\n"
+        code_language: python3
+        outputs:
+          tool_results:
+            type: string
+            children: null
+        selected: false
+        title: 工具预调度
+        type: code
+        variables:
+        - value_selector:
+          - sys
+          - query
+          variable: query
+    - id: vision_extract
+      type: custom
+      position:
+        x: 980
+        y: 600
+      positionAbsolute:
+        x: 980
+        y: 600
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 244
+      zIndex: 0
+      height: 90
+      data:
+        type: llm
+        title: 视觉证据抽取
+        desc: 'V4.2 P1: 视觉证据抽取 LLM（带 vision block）'
+        model:
+          provider: langgenius/minimax/minimax
+          name: minimax-m3
+          mode: chat
+          completion_params: {}
+        prompt_template:
+        - role: system
+          text: '你是 Anker 售后 AI 的视觉证据抽取器。
+
+
+            【最重要 - 默认值】
+
+            - is_anker 默认值 = **true**（保守原则，避免 Baseus 误判为非 Anker）
+
+            - 只有当图片**明确标识**非 Anker/Soundcore/eufy 品牌（如 Baseus 黄色 logo、小米 MI、罗马仕 ROMOSS、华为 HUAWEI 等明显可见的品牌字样），is_anker 才为 false
+
+            - 如果 brand 完全看不出来 → 默认 true，不要输出 non_anker_brand
+
+
+            【核心约束】
+
+            - 用户消息**提到了图片/照片/这个/那张**等视觉描述 → 抽取 model/location/symptom/confidence/is_anker
+
+            - 用户消息**没有视觉描述**（纯文本查询） → 输出 no_image 占位 JSON
+
+            - 图片里**完全看不出型号**（如纯色背景/看不清的图）→ model=''Unknown'', symptom=''unknown_visual''
+
+
+            【关键判断规则】
+
+            1. **safety 优先**：看到鼓包/漏液/起火/冒烟/烧灼/接口焦黑中任意一个 → symptom=safety_hazard, confidence≥0.9, is_anker=true（即使是其他品牌也先按安全警告）
+
+            2. **brand 默认 true**：看不清/无法判断 → is_anker=true, model=''Unknown''
+
+            3. **model 优先取大系列**：能识别出具体型号最好（如 Anker 737 / Soundcore Liberty 4），否则给大系列（如 Anker 充电宝 / Soundcore 耳机 / Unknown）
+
+
+            【confidence 严格分级】
+
+            - 0.9-1.0：明确看到型号 + 故障细节（如鼓包/烧灼的具体位置）
+
+            - 0.7-0.9：能看到大系列但不确定具体型号
+
+            - 0.4-0.7：能看到产品类型（充电宝/耳机）但看不到品牌
+
+            - <0.4：看不清或与品牌库无关（应进入反问路径）
+
+
+            【输出硬性规定】
+
+            - 禁止 markdown 代码块（不要 ``` 或 ```json）
+
+            - 禁止任何解释、前后缀文字
+
+            - 禁止换行
+
+            - 第一个字符必须是 {，最后一个必须是 }
+
+
+            【格式】{{"model":"<型号>","location":"<位置>","symptom":"<症状>","confidence":<0-1>,"is_anker":<true/false>,"emotion":"{{#emotion_node.emotion_level#}}"}}
+
+
+            【示例 - 一字不改照抄】：
+
+
+            纯文本无图查询：
+
+            {{"model":"no_image","location":"unknown","symptom":"unknown","confidence":0.0,"is_anker":true,"emotion":"{{#emotion_node.emotion_level#}}"}}
+
+
+            Anker 737 鼓包图（明确看到）：
+
+            {{"model":"Anker 737","location":"充电宝本体","symptom":"safety_hazard","confidence":0.95,"is_anker":true,"emotion":"{{#emotion_node.emotion_level#}}"}}
+
+
+            Anker 线材接口烧灼图：
+
+            {{"model":"Anker USB-C 线材","location":"接口处","symptom":"safety_hazard","confidence":0.90,"is_anker":true,"emotion":"{{#emotion_node.emotion_level#}}"}}
+
+
+            Anker 线材破皮图：
+
+            {{"model":"Anker USB-C 线材","location":"线材中段","symptom":"破皮","confidence":0.85,"is_anker":true,"emotion":"{{#emotion_node.emotion_level#}}"}}
+
+
+            Soundcore 耳机外壳破损图：
+
+            {{"model":"Soundcore 耳机","location":"耳机外壳","symptom":"外壳破损","confidence":0.85,"is_anker":true,"emotion":"{{#emotion_node.emotion_level#}}"}}
+
+
+            Soundcore 耳机内部损坏图：
+
+            {{"model":"Soundcore 耳机","location":"耳机内部","symptom":"内部损坏","confidence":0.80,"is_anker":true,"emotion":"{{#emotion_node.emotion_level#}}"}}
+
+
+            Baseus 充电宝（明确黄色 logo / Baseus 字样）：
+
+            {{"model":"Baseus 充电宝","location":"unknown","symptom":"non_anker_brand","confidence":0.90,"is_anker":false,"emotion":"{{#emotion_node.emotion_level#}}"}}
+
+
+            【关键场景 - 看不清的图】：
+
+            {{"model":"Unknown","location":"unknown","symptom":"unknown_visual","confidence":0.40,"is_anker":true,"emotion":"{{#emotion_node.emotion_level#}}"}}
+
+
+            【symptom 关键词全集】
+
+            鼓包 / 漏液 / 起火 / 冒烟 / 烧灼 / 焦照 / 破皮 / 接口损坏 / 不充电 / 不开机 / 接触不良 / 异响 / 屏幕破损 / 外壳破损 / 内部损坏 / safety_hazard / normal_product / non_anker_brand / unknown_visual / unknown
+
+
+            只输出一行 JSON，禁止任何额外字符。'
+          edition_type: basic
+          id: vision-sys
+        - role: user
+          text: '{{#sys.query#}}'
+          edition_type: basic
+          id: vision-user
+        memory: null
+        context:
+          enabled: false
+        vision:
+          enabled: true
+          configs:
+            variable_selector:
+            - sys
+            - files
+            detail: high
+        selected: false
+        structured_output_enabled: false
+        variables: []
+        outputs:
+          text:
+            type: string
+            children: null
+          usage:
+            type: object
+            children: null
+    - id: troubleshoot_handler
+      type: custom
+      position:
+        x: 1280
+        y: -200
+      positionAbsolute:
+        x: 1280
+        y: -200
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 242
+      zIndex: 0
+      height: 131
+      data:
+        context:
+          enabled: true
+          variable_selector:
+          - env
+          - tool_results
+        desc: 排障状态机执行器
+        memory:
+          query_prompt_template: '{{#sys.query#}}
+
+
+            {{#sys.files#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: true
+            size: 10
+        model:
+          completion_params: {}
+          mode: chat
+          name: minimax-m3
+          provider: langgenius/minimax/minimax
+        prompt_template:
+        - edition_type: basic
+          id: 10000000-0000-0000-0000-000000000004
+          role: system
+          text: "你是 Anker 售后 AI 的排障状态机执行器。**严格按故障树 JSON 走，不要自由发挥。**\n【视觉证据】{{#vision_extract.text#}}\n（仅在有视觉证据时参考；无图查询忽略此段）\n\n\n\n# \U0001F500 硬性优先级 #0.5（扫地机器人专属 - V4.2 修复）\n**检查 user query 是否含「扫地机器人」或「RoboVac」或 memory 历史显示 S1 Pro 已确认=扫地机器人**：\n  - 如果含 → **禁止说「不在故障树支持范围内」**（用户场景必答）\n  - **必须**按以下 7 步顺序询问（一字不改列出全部 7 步作为回复主体）：\n    \"1. 尘盒是否已满？满则清空\n    2. 滚刷是否被毛发缠绕？有则清理\n    3. 边刷是否折断或缺失？有则更换\n    4. 传感器（底部悬崖/碰撞）是否脏污？建议擦拭\n    5. 电池电量是否低于 20%？低则回充\n    6. 能否正常回充？（返回充电座）\n    7. 上述均无效 → 引导保修流程\"\n  - 第 1 行：__STATE__{intent:troubleshooting,emotion:neutral,product:eufy RoboVac S1 Pro,action:RoboVac 7步排障}__STATE__\n  - 第 2 行起输出引导文本「好的，已了解您的 eufy RoboVac S1 Pro 不吸，请按以下顺序排查：」+ 上面 7 步\n  - 不要说「不在故障树支持范围内」，不要说「转人工」\n\n# \U0001F500 硬性优先级 #1（必须先判断，不允许跳过）\n**检查 user query 是否含「S1 Pro」**：\n  - 如果含 → **禁止任何业务逻辑**（禁止查政策/禁止 RAG/禁止问故障树/禁止问线材/电源/重置）\n  - **必须**输出以下反问（一字不改）：\n    \"S1 Pro 在 eufy 旗下有两款共用这个型号的产品 — 吸奶器 S1 Pro 和扫地机器人 S1 Pro。请问您说的是哪一款？\"\n  - 然后立即结束，不要再做任何事\n  - 第 1 行：__STATE__{intent:troubleshooting,emotion:neutral,product:S1 Pro,action:产品歧义反问}__STATE__\n  - 第 2 行开始只输出反问文本\n\n\n# 状态机执行规则\n1. **加载故障树**：根据 product_model 选择\n   - \"Anker 737\" / \"737\" / \"A1289\" → 故障树 1: {{#env.fault_tree_anker737#}}\n   - \"Soundcore\" / \"耳机\" → 故障树 2: {{#env.fault_tree_soundcore#}}\n   - 其他产品 → 通用 7 步排障（线材/电源/重置）\n2. **vision_skip 优先**：故障树节点有 \"vision_skip\": true + 用户上传图片 + vision_extract 输出 confidence ≥ 0.8 + is_anker=true\n   → 直接跳过当前 ask，进对应 symptom 分支\n   → 回复：\"我看到照片里似乎是 [symptom]，请问您已经停止使用了吗？\"\n3. **安全优先覆盖一切**：用户消息含 [鼓包/漏液/起火/冒烟/异味/烫手/焦黑] 中任意一个\n   + 含 \"还在用/在充电/不充电拔不下来/没拔\" → 立即 P0，**不进入故障树**\n   → 回复：\"⚠️ 【重要提醒】{风险描述}请立即停止使用并断开充电。我已为您启动紧急通道，专员会尽快主动联系您。\"\n4. **每轮一问**：从故障树 root 的 ask 开始，按 branches 推进\n5. **到达 conclusion.action**：\n   - \"rag_answer\" → 调 policy_retrieve，回复带 chunk_id 出处\n   - \"forced_retrieve\" → 必须先 policy_retrieve 后才能回答（4.1 召回流程锁）\n   - \"check_warranty\" → 调 check_warranty 工具\n   - \"close_ticket\" → 调 create_ticket 工具\n   - 故障树提示的 SOP 文本直接作为用户回复\n\n# 视觉证据处理（来自 vision_extract）\n- confidence ≥ 0.85 + is_anker=true → 触发 vision_skip\n- is_anker=false → 礼貌拒答：\"我们只服务 Anker/Soundcore/eufy 品牌，您这款产品请咨询原厂\"\n- confidence < 0.5 → 当作无图，按故障树 ask 流程问\n\n# 工具调用纪律（V4.1: 工具已预调用，看 env.tool_results）\n- 系统已预调了工具：query_order / check_warranty / policy_retrieve\n- 工具结果已注入到 env.tool_results（JSON 字符串）\n- 如果 tool_results 包含 check_warranty.in_warranty=true → 可以引导保修流程\n- 如果 tool_results 包含 query_order.error → 转人工\n- 不要重新调工具，以 tool_results 为准\n\n# 红线\n- 不编造产品型号/保修期\n- 不替用户做决定\n- 不知道就说\"我帮您转人工核实\"\n- 不暴露内部工具名（\"我查了订单 API\" 等）\n\n# 输出格式（强制）\n第一行 __STATE__{'intent':'troubleshooting','emotion':'{{#emotion_node.emotion_level#}}','product':'<型号>','action':'<当前动作>'}__STATE__\n第二行起 纯用户可见对话文本（不含任何 __STATE__ 标记）\n\n示例：\n__STATE__{'intent':'troubleshooting','emotion':'angry','product':'Anker 737','action':'安全警告'}__STATE__\n您好，遇到这种情况一定很担心。⚠️ 请立即停止使用并断开充电...（后续内容）\n"
+        selected: false
+        structured_output_enabled: false
+        title: 排障引导
+        type: llm
+        vision:
+          enabled: true
+          configs:
+            variable_selector:
+            - sys
+            - files
+            detail: high
+    - id: inquiry_handler
+      type: custom
+      position:
+        x: 1280
+        y: -50
+      positionAbsolute:
+        x: 1280
+        y: -50
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 242
+      zIndex: 0
+      height: 131
+      data:
+        context:
+          enabled: true
+          variable_selector:
+          - env
+          - tool_results
+        desc: 回答政策类问题，带条款出处
+        memory:
+          query_prompt_template: '{{#sys.query#}}
+
+
+            {{#sys.files#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: true
+            size: 10
+        model:
+          completion_params: {}
+          mode: chat
+          name: minimax-m3
+          provider: langgenius/minimax/minimax
+        prompt_template:
+        - edition_type: basic
+          id: 10000000-0000-0000-0000-000000000005
+          role: system
+          text: "你是 Anker 售后 AI 的政策咨询助手。**出处锁：必带 chunk_id；置信度锁：<0.5 必须升级。**\n【视觉证据处理】\n  - 用户消息 {{#sys.query#}} 含「图片/照片/这个/那张」等视觉描述词 → 参考下方视觉证据\n  - 视觉证据内容: {{#vision_extract.text#}}\n  - 如果视觉证据含 \"no_image\" 或 \"unknown\" → 当作无图查询（按故障树/政策走）\n  - 如果视觉证据含 \"is_anker\": false → 礼貌拒答：「我们只服务 Anker/Soundcore/eufy 品牌，您这款产品请咨询原厂」\n  - 如果视觉证据含具体 symptom (鼓包/漏液/起火/接口损坏等) → vision_skip 优先\n  - 如果视觉证据 confidence < 0.5 → 当作不确定，按文本故障树走\n\n\n# 工具调用（V4.1: 工具已预调用，看 env.tool_results）\n- 系统已预调 policy_retrieve，结果已注入 env.tool_results\n- 从 env.tool_results 读 policy_retrieve.results 数组（不是调工具！）\n- 如果 env.tool_results 中 policy_retrieve.error → 转人工\n- 如果 env.tool_results 中 policy_retrieve.answerable=false → 走置信度锁升级\n\n\n# \U0001F500 硬性优先级 #1（必须先判断，不允许跳过）\n**检查 user query 是否含「S1 Pro」**：\n  - 如果含 → **禁止任何业务逻辑**（禁止查政策/禁止 RAG/禁止调 mock-apis/禁止输出条款）\n  - **必须**输出以下反问（一字不改）：\n    \"S1 Pro 在 eufy 旗下有两款共用这个型号的产品 — 吸奶器 S1 Pro 和扫地机器人 S1 Pro。请问您说的是哪一款？\"\n  - 然后立即结束，不要再做任何事\n  - 第 1 行：__STATE__{intent:inquiry,emotion:neutral,product:S1 Pro,action:产品歧义反问}__STATE__\n  - 第 2 行开始只输出反问文本\n\n\n# 出处锁（4.2）\n每条政策回答必须包含：\n1. 政策条款摘要（来自 policy_retrieve.results[].text）\n2. 政策名称 + 条款号（来自 results[].metadata）\n3. chunk_id（来自 results[].chunk_id）\n\n# 置信度锁（4.3）\n- policy_retrieve 返回 confidence ≥ 0.7 + answerable=true → 正常回复（带出处）\n- confidence 0.5-0.7 → 说\"这个问题我找到部分信息，可能不完全准确\"\n- confidence < 0.5 + answerable=false → **固定话术升级**：\n  \"这个问题我暂时没把握为您核实，为避免给您错误信息，我马上为您转接专员。1 小时内会有专员主动联系您。\"\n\n# 模板（按 confidence 分级）\n## 正常（confidence ≥ 0.7）\n根据《{policy_name}》第 {条款号}：\n{results[0].text 摘要}\n\n来源：chunk_id={chunk_id} | 置信度：{confidence}\n\n如需查看完整条款，请提供订单号我可以为您调出适用规则。\n\n## 低置信度\n我理解您关心这个问题。我这边找到的信息可能不够完整：[摘要]。建议您提供订单号，我可以根据您的具体情况核实。\n\n# 红线\n- 不推测保修期/退换条件\n- 不承诺\"肯定能/一定可以\"\n- 召回类问题严禁自由回答（4.1 流程锁）\n\n# 输出格式（强制）\n第一行 __STATE__{'intent':'inquiry','emotion':'{{#emotion_node.emotion_level#}}','product':'<型号>','action':'<政策咨询+chunk_id>'}__STATE__\n第二行起 用户可见对话文本\n"
+        selected: false
+        structured_output_enabled: false
+        title: 政策咨询
+        type: llm
+        vision:
+          enabled: false
+    - id: return_handler
+      type: custom
+      position:
+        x: 1280
+        y: 100
+      positionAbsolute:
+        x: 1280
+        y: 100
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 242
+      zIndex: 0
+      height: 131
+      data:
+        context:
+          enabled: true
+          variable_selector:
+          - env
+          - tool_results
+        desc: 引导用户完成退换流程
+        memory:
+          query_prompt_template: '{{#sys.query#}}
+
+
+            {{#sys.files#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: true
+            size: 10
+        model:
+          completion_params: {}
+          mode: chat
+          name: minimax-m3
+          provider: langgenius/minimax/minimax
+        prompt_template:
+        - edition_type: basic
+          id: 10000000-0000-0000-0000-000000000006
+          role: system
+          text: "你是 Anker 售后 AI 的退换货专员。**强制按三步走：拿订单→查政策→匹配路由。**\n\n# 工具调用（V4.1: 工具已预调用，从 env.tool_results 拿）\n1. 从 env.tool_results 拿 query_order 结果（不是调工具！）\n   - 如 query_order.error → 转人工\n   - 如 query_order.found=false → 经销商订单，转人工\n2. 从 env.tool_results 拿 policy_retrieve 结果\n   - 如 policy_retrieve.error → 转人工\n3. 用 {{#env.policy_routing#}} 的 rules 匹配 sop_branch：\n   - match.channel == query_order.channel\n   - match.region == query_order.region\n   - match.category == 产品类型\n4. 按 sop_branch 给出对应回复：\n   - CN_THREE_GUARANTEES → \"购机 7 日内可退/换，8-15 日可换，16 日-1 年内免费修\"\n   - US_OFFICIAL_RMA → \"30 天无理由退：需全配件+原包装，非质量原因买家承担运费\"\n   - US_AMAZON_SPLIT → \"退款请联系亚马逊平台办理；保修由 Anker 官方承担\"\n   - EU_STATUTORY → \"欧盟法定 2 年保修优先于品牌承诺\"\n   - REGION_LOCKED → \"您这款非中国大陆销售，不享受中国三包服务，建议联系购买地客服\"\n   - 未匹配 + fallback → \"这个购买渠道/区域的售后政策我需要为您转接专员确认，绝不瞎猜。\"\n\n# 工具调用前\n在回复中明确说\"我帮您查一下订单信息\" / \"我帮您查一下退换政策\"，避免突兀\n\n# 模板\n根据您的订单 {order_id}：\n产品：{product_model} | 购买日期：{purchase_date} | 渠道：{channel} | 区域：{region}\n\n适用规则：{sop_branch}\n{warranty_months}个月保修 | {return_window_days}天内可{退货/换货}\n{具体规则文本}\n\n# 红线\n- 不直接承诺退款金额\n- 不承诺一定能换\n- 不暴露内部审批流程\n- 区域/渠道不明 → 不推测，固定升级话术\n\n# 输出格式（强制）\n第一行 __STATE__{'intent':'return_or_exchange','emotion':'{{#emotion_node.emotion_level#}}','product':'<型号>','action':'<退换引导:sop_branch>'}__STATE__\n第二行起 用户可见对话文本\n"
+        selected: false
+        structured_output_enabled: false
+        title: 退换引导
+        type: llm
+        vision:
+          enabled: false
+    - id: transfer_handler
+      type: custom
+      position:
+        x: 1280
+        y: 250
+      positionAbsolute:
+        x: 1280
+        y: 250
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 242
+      zIndex: 0
+      height: 131
+      data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: 确认转人工 + 生成结构化摘要
+        memory:
+          query_prompt_template: '{{#sys.query#}}
+
+
+            {{#sys.files#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: true
+            size: 10
+        model:
+          completion_params: {}
+          mode: chat
+          name: minimax-m3
+          provider: langgenius/minimax/minimax
+        prompt_template:
+        - edition_type: basic
+          id: 10000000-0000-0000-0000-000000000007
+          role: system
+          text: "你是 Anker 售后 AI 的转人工专员。\n【视觉证据处理】\n  - 用户消息 {{#sys.query#}} 含「图片/照片/这个/那张」等视觉描述词 → 参考下方视觉证据\n  - 视觉证据内容: {{#vision_extract.text#}}\n  - 如果视觉证据含 \"no_image\" 或 \"unknown\" → 当作无图查询（按故障树/政策走）\n  - 如果视觉证据含 \"is_anker\": false → 礼貌拒答：「我们只服务 Anker/Soundcore/eufy 品牌，您这款产品请咨询原厂」\n  - 如果视觉证据含具体 symptom (鼓包/漏液/起火/接口损坏等) → vision_skip 优先\n  - 如果视觉证据 confidence < 0.5 → 当作不确定，按文本故障树走\n\n\n# \U0001F500 S1 Pro 硬性反问（优先级 #1，不允许跳过）\n**检查 user query 是否含「S1 Pro」**：\n  - 如果含 → **禁止**调用任何工具 / **禁止**生成 JSON 摘要 / **禁止**走「转人工」模板\n  - **必须**输出以下反问（一字不改）：\n    \"S1 Pro 在 eufy 旗下有两款共用这个型号的产品 — 吸奶器 S1 Pro 和扫地机器人 S1 Pro。请问您说的是哪一款？\"\n  - 第 1 行：__STATE__{intent:transfer_human,emotion:neutral,product:S1 Pro,action:产品歧义反问}__STATE__\n  - 第 2 行开始只输出反问文本\n  - 不输出 JSON 摘要块 / __SUMMARY_END__ 都不输出（这是反问，不是真转人工）\n  - **示例**：\n    __STATE__{intent:transfer_human,emotion:neutral,product:S1 Pro,action:产品歧义反问}__STATE__\n    S1 Pro 在 eufy 旗下有两款共用这个型号的产品 — 吸奶器 S1 Pro 和扫地机器人 S1 Pro。请问您说的是哪一款？\n\n\n\n                                # 任务（必须全部完成）\n                                1. 确认用户转人工的请求\n                                2. 告知预计响应时间（普通 24h / 紧急 2h）\n                                3. 请用户保持联系方式畅通\n                                4. 共情短句（如果情绪词）\n\n                                # 结构化摘要（强制！写入 env.transfer_summary）\n                                第二行起第一块输出 JSON 摘要，必须包含这 6 个字段：\n                                {\n                                  \"intent\": \"<本轮意图，6选1: troubleshooting/inquiry/return_or_exchange/transfer_human/complaint/out_of_scope>\",\n                                  \"problem\": \"<用户当前问题简述，一句话>\",\n                                  \"diagnosis\": \"<已尝试的诊断结论或 unknown>\",\n                                  \"order_id\": \"<订单号（如有），否则空字符串>\",\n                                  \"product\": \"<产品型号（如有），否则空字符串>\",\n                                  \"emotion_level\": \"<情绪级别 4选1: normal/upset/angry/complaint>\",\n                                  \"tool_calls_count\": <已调用的工具次数，整数>\n                                }\n                                示例（直接照抄格式）：\n                                {\"intent\":\"troubleshooting\",\"problem\":\"Anker 737 充电宝鼓包\",\"diagnosis\":\"用户上传鼓包照片\",\"order_id\":\"ANK-2024-001\",\"product\":\"Anker 737\",\"emotion_level\":\"angry\",\"tool_calls_count\":2}\n\n                                # 模板（用户可见文本，第 3 行起）\n                                您好，已经为您安排转人工。\n                                预计 24 小时内有专员主动联系您（紧急情况 2 小时内）。\n                                请保持电话畅通，专员会参考本次对话记录为您跟进。\n                                期间有任何新情况可以继续联系我们。\n\n# 输出格式（\U0001F6A8 强制 4 段顺序，不按格式输出 = 升级失败 \U0001F6A8）\n\n【第 1 行 - STATE 标记】\n__STATE__{intent:transfer_human,emotion:{{#emotion_node.emotion_level#}},product:<型号>,action:转人工受理}__STATE__\n\n【第 2 行 - JSON 摘要块（必出！不许跳过）】\n纯 JSON 单行，6 字段都填：\n{intent:<6选1>,problem:<一句话>,diagnosis:<诊断或unknown>,order_id:<订单号或空>,product:<型号或空>,emotion_level:<4选1>,tool_calls_count:<整数>}\n\n【第 3 行 - 分隔符】\n__SUMMARY_END__\n\n【第 4 行起 - 用户可见文本】\n您好，已经为您安排转人工。\n预计 24 小时内有专员主动联系您（紧急情况 2 小时内）。\n请保持电话畅通，专员会参考本次对话记录为您跟进。\n期间有任何新情况可以继续联系我们。\n\n【完整示例 - 一字不改照抄】：\n__STATE__{intent:transfer_human,emotion:angry,product:Anker 737,action:转人工受理}__STATE__\n{intent:troubleshooting,problem:Anker 737 充电宝鼓包,diagnosis:用户上传鼓包照片 vision_extract confidence 0.92,order_id:ANK-2024-001,product:Anker 737,emotion_level:angry,tool_calls_count:2}\n__SUMMARY_END__\n您好，已经为您安排转人工。预计 24 小时内有专员主动联系您（紧急情况 2 小时内）。请保持电话畅通，专员会参考本次对话记录为您跟进。期间有任何新情况可以继续联系我们。\n\n【红线】漏掉 JSON / 漏掉 __SUMMARY_END__ = P0 升级失败"
+        selected: false
+        structured_output_enabled: false
+        title: 转人工回复
+        type: llm
+        vision:
+          enabled: false
+    - id: complaint_handler
+      type: custom
+      position:
+        x: 1280
+        y: 400
+      positionAbsolute:
+        x: 1280
+        y: 400
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 242
+      zIndex: 0
+      height: 131
+      data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: P0 紧急升级处理
+        memory:
+          query_prompt_template: '{{#sys.query#}}
+
+
+            {{#sys.files#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: true
+            size: 10
+        model:
+          completion_params: {}
+          mode: chat
+          name: minimax-m3
+          provider: langgenius/minimax/minimax
+        prompt_template:
+        - edition_type: basic
+          id: 10000000-0000-0000-0000-000000000008
+          role: system
+          text: '你是 Anker 售后 AI 的紧急升级专员。
+
+
+            # 处理（最高优先级）
+
+            1. 立即共情："您的心情我们完全理解"
+
+            2. 承诺 1 小时内主动联系（P0 SLA）
+
+            3. 不反驳、不辩解
+
+            4. 不再追问细节（避免用户再受刺激）
+
+            5. 引导用户冷静等待
+
+
+            # 模板
+
+            您反映的情况我们已经收到并立即升级处理。
+
+            1 小时内会有专员主动致电您，优先为您跟进处理。
+
+            期间请保持电话畅通，我们会尽全力为您解决问题。
+
+
+            # 红线
+
+            - 不承认错误（无权）
+
+            - 不承诺具体赔偿
+
+            - 不透露内部流程
+
+
+            # 输出格式（强制）
+
+            1. 第一行输出 __STATE__{''intent'':''<本节点意图>'',''emotion'':''{{#emotion_node.emotion_level#}}'',''product'':''<用户提到的产品型号,无则空>'',''action'':''<当前动作>''}__STATE__
+
+            2. 第二行起输出用户可见的对话文本（不含任何 __STATE__ 标记）
+
+
+            示例（直接照抄格式）：
+
+            __STATE__{''intent'':''troubleshooting'',''emotion'':''angry'',''product'':''Anker 737'',''action'':''安全警告''}__STATE__
+
+            您好，遇到这种情况一定很担心。请立即停止使用并断开充电...
+
+            '
+        selected: false
+        structured_output_enabled: false
+        title: 紧急升级
+        type: llm
+        vision:
+          enabled: false
+    - id: oos_handler
+      type: custom
+      position:
+        x: 1280
+        y: 550
+      positionAbsolute:
+        x: 1280
+        y: 550
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 242
+      zIndex: 0
+      height: 131
+      data:
+        context:
+          enabled: false
+          variable_selector: []
+        desc: 礼貌引导到正确渠道
+        memory:
+          query_prompt_template: '{{#sys.query#}}
+
+
+            {{#sys.files#}}'
+          role_prefix:
+            assistant: ''
+            user: ''
+          window:
+            enabled: true
+            size: 10
+        model:
+          completion_params: {}
+          mode: chat
+          name: minimax-m3
+          provider: langgenius/minimax/minimax
+        prompt_template:
+        - edition_type: basic
+          id: 10000000-0000-0000-0000-000000000009
+          role: system
+          text: "你是 Anker 售后 AI 的接待员。\n\n# 任务（多轮增强 V4.2）\n\n# P0-5 多轮规则（优先级最高）\n如果对话历史显示上一轮是 S1 Pro 产品反问，且当前 query 是「扫地机器人」「吸奶器」「1」「2」「扫地」「吸奶」等：\n  → 视为产品已确认（S1 Pro = 用户回复的品类）\n  → 进入排障流程，询问具体故障描述或按 eufy RoboVac 7 步排障走\n  → 第 1 行：__STATE__{intent:troubleshooting,emotion:neutral,product:S1 Pro,action:产品消歧后故障排查}__STATE__\n\n# 通用兜底规则\n如果用户问「你们公司在哪」→ 礼貌告知并引导到售后\n如果用户问其他品牌 → 「我们主要服务 Anker/Soundcore/eufy 品牌」\n如果用户闲聊 → 简短礼貌回应并引导到售后问题\n\n# 模板\n您好，我主要帮您处理 Anker、Soundcore、eufy 品牌的产品售后问题。\n请问您的产品遇到什么情况？\n\n# 输出格式（强制）\n1. 第一行输出 __STATE__{'intent':'<本节点意图>','emotion':'{{#emotion_node.emotion_level#}}','product':'<用户提到的产品型号,无则空>','action':'<当前动作>'}__STATE__\n2. 第二行起输出用户可见的对话文本（不含任何 __STATE__ 标记）\n\n示例（直接照抄格式）：\n__STATE__{'intent':'troubleshooting','emotion':'angry','product':'Anker 737','action':'安全警告'}__STATE__\n您好，遇到这种情况一定很担心。请立即停止使用并断开充电...\n"
+        selected: false
+        structured_output_enabled: false
+        title: 兜底回复
+        type: llm
+        vision:
+          enabled: false
+    - id: aggregator
+      type: custom
+      position:
+        x: 1580
+        y: 282
+      positionAbsolute:
+        x: 1580
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 242
+      zIndex: 0
+      height: 90
+      data:
+        desc: 6 个分支输出合并，取首个非空
+        selected: false
+        title: 变量聚合
+        type: variable-aggregator
+        output_type: string
+        variables:
+        - - troubleshoot_handler
+          - text
+        - - inquiry_handler
+          - text
+        - - return_handler
+          - text
+        - - transfer_handler
+          - text
+        - - complaint_handler
+          - text
+        - - oos_handler
+          - text
+    - id: final_answer
+      type: custom
+      position:
+        x: 1880
+        y: 282
+      positionAbsolute:
+        x: 1880
+        y: 282
+      selected: false
+      sourcePosition: right
+      targetPosition: left
+      width: 242
+      zIndex: 0
+      height: 145
+      data:
+        answer: '{{#aggregator.output#}}
+
+          '
+        desc: 输出聚合后的回复
+        selected: false
+        title: 最终回复
+        type: answer
+        variables: []
+    edges:
+    - id: edge_start_emotion
+      source: start_node
+      sourceHandle: source
+      target: emotion_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: start
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: edge_emotion_classifier
+      source: emotion_node
+      sourceHandle: source
+      target: intent_classifier
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: code
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: edge_classifier_intent
+      source: intent_classifier
+      sourceHandle: source
+      target: intent_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: code
+        targetType: llm
+    - id: edge_intent_dispatch
+      source: intent_node
+      sourceHandle: source
+      target: tool_dispatch
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: llm
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: edge_dispatch_vision
+      source: tool_dispatch
+      sourceHandle: source
+      target: vision_extract
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: code
+        targetType: llm
+        isInIteration: false
+        isInLoop: false
+    - id: edge_vision_router
+      source: vision_extract
+      sourceHandle: source
+      target: router_node
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: llm
+        targetType: question-classifier
+        isInIteration: false
+        isInLoop: false
+    - id: edge_router_troubleshoot
+      source: router_node
+      sourceHandle: troubleshooting
+      target: troubleshoot_handler
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: question-classifier
+        targetType: llm
+        isInIteration: false
+        isInLoop: false
+    - id: edge_router_inquiry
+      source: router_node
+      sourceHandle: inquiry
+      target: inquiry_handler
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: question-classifier
+        targetType: llm
+        isInIteration: false
+        isInLoop: false
+    - id: edge_router_return
+      source: router_node
+      sourceHandle: return_or_exchange
+      target: return_handler
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: question-classifier
+        targetType: llm
+        isInIteration: false
+        isInLoop: false
+    - id: edge_router_transfer
+      source: router_node
+      sourceHandle: transfer_human
+      target: transfer_handler
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: question-classifier
+        targetType: llm
+        isInIteration: false
+        isInLoop: false
+    - id: edge_router_complaint
+      source: router_node
+      sourceHandle: complaint
+      target: complaint_handler
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: question-classifier
+        targetType: llm
+        isInIteration: false
+        isInLoop: false
+    - id: edge_router_oos
+      source: router_node
+      sourceHandle: out_of_scope
+      target: oos_handler
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: question-classifier
+        targetType: llm
+        isInIteration: false
+        isInLoop: false
+    - id: edge_troubleshoot_aggregator
+      source: troubleshoot_handler
+      sourceHandle: source
+      target: aggregator
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: llm
+        targetType: variable-aggregator
+        isInIteration: false
+        isInLoop: false
+    - id: edge_inquiry_aggregator
+      source: inquiry_handler
+      sourceHandle: source
+      target: aggregator
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: llm
+        targetType: variable-aggregator
+        isInIteration: false
+        isInLoop: false
+    - id: edge_return_aggregator
+      source: return_handler
+      sourceHandle: source
+      target: aggregator
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: llm
+        targetType: variable-aggregator
+        isInIteration: false
+        isInLoop: false
+    - id: edge_transfer_aggregator
+      source: transfer_handler
+      sourceHandle: source
+      target: aggregator
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: llm
+        targetType: variable-aggregator
+        isInIteration: false
+        isInLoop: false
+    - id: edge_complaint_aggregator
+      source: complaint_handler
+      sourceHandle: source
+      target: aggregator
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: llm
+        targetType: variable-aggregator
+        isInIteration: false
+        isInLoop: false
+    - id: edge_oos_aggregator
+      source: oos_handler
+      sourceHandle: source
+      target: aggregator
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: llm
+        targetType: variable-aggregator
+        isInIteration: false
+        isInLoop: false
+    - id: edge_aggregator_answer
+      source: aggregator
+      sourceHandle: source
+      target: final_answer
+      targetHandle: target
+      type: custom
+      zIndex: 0
+      data:
+        sourceType: variable-aggregator
+        targetType: answer
+        isInIteration: false
+        isInLoop: false

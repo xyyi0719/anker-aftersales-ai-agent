@@ -1,0 +1,264 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Anker 售后 API",
+    "description": "为 Dify Chatflow 提供订单查询/保修检查/工单创建/政策检索接口。",
+    "version": "1.1.0"
+  },
+  "servers": [
+    {
+      "url": "http://mock-apis:8002",
+      "description": "Docker Compose 内部网络（Dify 容器内调用，决赛推荐）"
+    },
+    {
+      "url": "http://localhost:8002",
+      "description": "本地开发"
+    }
+  ],
+  "paths": {
+    "/api/orders/{order_id}": {
+      "post": {
+        "summary": "查询订单详情",
+        "description": "根据订单号查询订单信息，包括产品型号、购买渠道、保修状态等。",
+        "operationId": "query_order",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "订单号，例如 ANK-2024-001"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "region": { "type": "string", "description": "区域代码，如 CN/US/EU/JP" },
+                  "channel": { "type": "string", "description": "渠道：official/jd/tmall/douyin/dealer" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "订单详情",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Order" }
+              }
+            }
+          },
+          "404": {
+            "description": "订单不存在（可能是经销商订单）",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/warranty/check": {
+      "post": {
+        "summary": "查询保修状态",
+        "description": "根据产品型号和购买日期判断是否在保、剩余天数、是否临期。",
+        "operationId": "check_warranty",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["product_model", "purchase_date"],
+                "properties": {
+                  "order_id": { "type": "string" },
+                  "product_model": { "type": "string", "description": "产品型号" },
+                  "purchase_date": { "type": "string", "description": "YYYY-MM-DD" },
+                  "region": { "type": "string", "default": "CN" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "保修状态",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WarrantyStatus" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets": {
+      "post": {
+        "summary": "创建工单",
+        "description": "为用户创建售后工单，返回工单号和 SLA 时间。",
+        "operationId": "create_ticket",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["product_model", "fault_type", "fault_description", "user_contact"],
+                "properties": {
+                  "order_id": { "type": "string" },
+                  "product_model": { "type": "string" },
+                  "fault_type": { "type": "string", "description": "故障类型：鼓包/不进电/无声音/不工作/..." },
+                  "fault_description": { "type": "string" },
+                  "images": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "故障图片 URL 列表"
+                  },
+                  "user_contact": { "type": "string" },
+                  "emotion_level": {
+                    "type": "string",
+                    "enum": ["normal", "upset", "angry", "complaint"],
+                    "default": "normal",
+                    "description": "用户情绪等级，影响 SLA"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "工单创建成功",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Ticket" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/policy/retrieve": {
+      "post": {
+        "summary": "政策检索（幻觉四道防线·出处锁）",
+        "description": "根据用户问题检索 Anker/充电类/耳机/智能家居政策条款，返回 top-K 相关条款 + 整体置信度 + answerable 标志。调用此工具后才能输出政策类回答（4.2 出处锁）。",
+        "operationId": "policy_retrieve",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["query"],
+                "properties": {
+                  "query": { "type": "string", "description": "用户问题或检索关键词，如'Anker 737 充电宝保修期多久'" },
+                  "top_k": { "type": "integer", "default": 5, "description": "返回前 K 条结果" },
+                  "filters": {
+                    "type": "object",
+                    "description": "元数据过滤",
+                    "properties": {
+                      "product": { "type": "string", "description": "产品型号，如 Anker 737" },
+                      "region": { "type": "string", "description": "区域：CN/US/EU/JP" },
+                      "channel": { "type": "string", "description": "渠道：official/jd/tmall/douyin/dealer" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "检索结果（answerable=true 时可自由回答；false 时必须触发诚实升级）",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PolicyRetrieveResult" }
+              }
+            }
+          },
+          "503": {
+            "description": "retrieval 服务不可达",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Order": {
+        "type": "object",
+        "properties": {
+          "order_id": { "type": "string" },
+          "product_model": { "type": "string" },
+          "product_category": { "type": "string" },
+          "channel": { "type": "string" },
+          "region": { "type": "string" },
+          "purchase_date": { "type": "string" },
+          "warranty_status": { "type": "string" },
+          "warranty_expire_date": { "type": "string" }
+        }
+      },
+      "WarrantyStatus": {
+        "type": "object",
+        "properties": {
+          "in_warranty": { "type": "boolean" },
+          "days_remaining": { "type": "integer" },
+          "expiring_soon": { "type": "boolean" },
+          "exclusions_applied": { "type": "array", "items": { "type": "string" } },
+          "out_of_warranty_solutions": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "Ticket": {
+        "type": "object",
+        "properties": {
+          "ticket_id": { "type": "string" },
+          "status": { "type": "string" },
+          "estimated_resolution": { "type": "string" },
+          "next_step": { "type": "string" },
+          "sla_days": { "type": "integer" }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": { "type": "string" },
+          "message": { "type": "string" },
+          "fallback_action": { "type": "string" }
+        }
+      },
+      "PolicyRetrieveResult": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "chunk_id": { "type": "string", "description": "chunk 唯一 ID，4.2 出处锁用" },
+                "text": { "type": "string" },
+                "metadata": { "type": "object" },
+                "score": { "type": "number" },
+                "sources": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          },
+          "confidence": { "type": "number", "description": "整体置信度 0-1" },
+          "answerable": { "type": "boolean", "description": "true=可自由回答，false=必须诚实升级" },
+          "low_confidence_reason": { "type": "string", "nullable": true },
+          "fallback_message": { "type": "string", "nullable": true }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "_comment": "Anker 737 故障树示例（队长块1.4 待替换为真实数据）",
+  "product_model": "Anker 737",
+  "product_category": "power_bank",
+  "version": "0.1 (placeholder)",
+  "root": {
+    "id": "root",
+    "question": "您的 Anker 737 充电宝出现了什么现象？",
+    "branches": [
+      {
+        "id": "bulge",
+        "label": "鼓包",
+        "synonyms": ["鼓起", "凸起", "膨胀", "变形"],
+        "next": {
+          "id": "bulge-stop-check",
+          "question": "鼓包后您是否还在使用或充电？",
+          "warning": "⚠️ 鼓包的锂电池有起火爆炸风险，请立即停止使用！",
+          "branches": [
+            {
+              "id": "still-using",
+              "label": "仍在用",
+              "action": "IMMEDIATE_STOP_AND_ESCALATE",
+              "escalate_level": "P0",
+              "reason": "用户安全风险"
+            },
+            {
+              "id": "stopped",
+              "label": "已停用",
+              "action": "CREATE_TICKET",
+              "ticket_fault_type": "鼓包",
+              "next_step": "申请免费更换"
+            }
+          ]
+        }
+      },
+      {
+        "id": "not-charging",
+        "label": "充不进电",
+        "synonyms": ["不充电", "充不进去", "充电没反应"],
+        "next": {
+          "id": "charge-check",
+          "question": "请检查 3 项：1) 充电线是否原装 2) 接口有无异物/发黑 3) 按一下指示灯是否会亮。哪一项有问题？",
+          "branches": [
+            {
+              "id": "cable-issue",
+              "label": "充电线非原装",
+              "action": "OUT_OF_WARRANTY_SOLUTION",
+              "solution_query": "非原装线材导致的损坏不在保修范围"
+            },
+            {
+              "id": "port-burnt",
+              "label": "接口发黑/烧灼",
+              "action": "CREATE_TICKET",
+              "ticket_fault_type": "接口烧灼"
+            },
+            {
+              "id": "no-light",
+              "label": "指示灯不亮",
+              "action": "CREATE_TICKET",
+              "ticket_fault_type": "指示灯异常"
+            },
+            {
+              "id": "all-normal",
+              "label": "都正常",
+              "action": "ESCALATE_TO_HUMAN",
+              "reason": "基础检查通过仍无法充电，需人工深度排查"
+            }
+          ]
+        }
+      },
+      {
+        "id": "fast-drain",
+        "label": "掉电快",
+        "synonyms": ["电量消耗快", "续航短"],
+        "next": {
+          "id": "usage-check",
+          "question": "是否在为高功率设备供电（如笔记本）？",
+          "branches": [
+            {
+              "id": "high-power",
+              "label": "是",
+              "action": "PROVIDE_INFO",
+              "info": "Anker 737 在 100W 输出下持续高负载是正常现象，请检查设备实际功耗需求"
+            },
+            {
+              "id": "low-power",
+              "label": "否",
+              "action": "CREATE_TICKET",
+              "ticket_fault_type": "容量异常"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "_vision_skip": {
+    "bulge": {
+      "phenomenon": "鼓包",
+      "confidence_threshold": 0.8,
+      "skip_to": "bulge-stop-check"
+    },
+    "burnt": {
+      "phenomenon": "烧灼",
+      "confidence_threshold": 0.85,
+      "skip_to": "charge-check",
+      "force_branch": "port-burnt"
+    }
+  },
+  "_forced_retrieve": [
+    {
+      "trigger_keywords": ["召回", "安全公告", "有没有出过问题"],
+      "must_call_tool": "policy_retrieve",
+      "reason": "安全敏感信息，不允许自由回答"
+    }
+  ]
+}
