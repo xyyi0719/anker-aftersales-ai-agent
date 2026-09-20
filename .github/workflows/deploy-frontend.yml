@@ -1,0 +1,90 @@
+name: Deploy Frontend to Anker Workbench
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy-frontend.yml'
+      - 'deploy/nginx.conf'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+        env:
+          # 公开的 Dify 端点（部署后的 workbench 公网访问）
+          VITE_DIFY_API_URL: https://dify.high33light.cn/v1
+          VITE_DIFY_API_KEY: app-OlFaO9F9XTSog1PopZlLLqFr
+          VITE_USE_MOCK: false
+
+      - name: Package dist + nginx.conf
+        run: |
+          mkdir -p workbench-deploy/dist
+          cp -r frontend/dist/. workbench-deploy/dist/
+          cp deploy/nginx.conf workbench-deploy/nginx.conf
+          tar -czf workbench-deploy.tar.gz -C workbench-deploy .
+          ls -la workbench-deploy.tar.gz
+
+      - name: Copy tarball to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: "workbench-deploy.tar.gz"
+          target: "/tmp/"
+
+      - name: Deploy on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+
+            # 1. 解压新版本到 deploy 目录
+            rm -rf /home/ubuntu/workbench-deploy
+            mkdir -p /home/ubuntu/workbench-deploy
+            tar -xzf /tmp/workbench-deploy.tar.gz -C /home/ubuntu/workbench-deploy
+
+            # 2. 重启容器（dist/ 是 ro mount, nginx 启动时会重新读取）
+            docker compose -f /home/ubuntu/dify/docker/docker-compose.yaml restart anker-workbench
+
+            # 3. 等容器就绪
+            sleep 8
+
+            # 4. 验证
+            echo "=== /usr/share/nginx/html contents ==="
+            docker exec anker-workbench ls /usr/share/nginx/html/ | head -20
+
+            echo "=== /healthz ==="
+            curl -fsS http://localhost:5173/healthz && echo " [OK]"
+
+            echo "=== / HTTP code ==="
+            curl -s -o /dev/null -w "HTTP=%{http_code}\n" http://localhost:5173/
+
+            # 5. 清理
+            rm -f /tmp/workbench-deploy.tar.gz
+
+            echo "=== Deploy Success ==="
