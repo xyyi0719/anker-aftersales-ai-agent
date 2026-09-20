@@ -102,7 +102,7 @@ export interface RetrievalRecord {
 
 export interface EmotionPoint {
   timestamp: number;
-  level: 'normal' | 'upset' | 'angry' | 'complaint';
+  level: 'normal' | 'upset' | 'angry' | 'angry_escalated' | 'complaint';
   trigger?: string;
 }
 
