@@ -253,6 +253,17 @@ export function buildInitialStates(query: string): {
   };
 }
 
+// ========== 「理解为」里的关键信息：只从用户原话里截取已命中的短语，不做推断 ==========
+const KEY_INFO_KW = [
+  '充不进电', '充不进去', '充不上电', '无法充电', '充电慢',
+  '没声音', '单边无声', '一边没声音', '连不上', '配对失败',
+  '鼓包', '冒烟', '起火', '漏液', '黑屏', '不吸',
+  '退货', '退款', '换货', '保修', '质保', '召回',
+];
+export function extractKeyInfo(query: string): string | undefined {
+  return KEY_INFO_KW.find(k => query.includes(k));
+}
+
 // ========== 视觉证据解析（从 LLM 输出中匹配鼓包/漏液/起火等关键词）==========
 export function inferVisionEvidence(query: string, attachments: Array<{ type: string; url: string }> = []): {
   product_model: string;

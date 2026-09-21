@@ -6,7 +6,6 @@
 
 import { useMemo } from 'react';
 import type { DifyEvent, RoutingStep, TaskItem, RetrievalRecord, EmotionPoint, TroubleshootingState, ChatMessage } from '../types';
-import { buildInitialStates, inferVisionEvidence } from '../utils/inference';
 import { parseEvidence } from '../utils/evidence';
 
 interface UseEventParserOpts {
@@ -27,25 +26,9 @@ export function useEventParser({ events, initialQuery, initialAttachments, lastA
       toolCalls: [],
     };
 
-    // 1. 初始推断（在 LLM 返回前显示，让 UI 立即有状态）
-    // P0-2 修复: 用 initialQuery 计算即时 emotion/intent/product
-    if (initialQuery) {
-      const init = buildInitialStates(initialQuery);
-      routing.push(...init.routing);
-      tasks.push(...init.tasks);
-      emotions.push(...init.emotions);
-      Object.assign(state, init.state);
-      // 视觉证据（如果有附件）
-      if (initialAttachments && initialAttachments.length > 0) {
-        const ev = inferVisionEvidence(initialQuery, initialAttachments);
-        if (ev) (state as any).visionEvidence = ev;
-      }
-    }
+    // 只渲染服务/模型给的值：不在前端从用户原话推断情绪/意图/产品（B2 边界）。
 
-    // P0-2 修复: 每次 events 重新计算时，从 events 中**累积**情绪值（覆盖初始推断）
-    // 处理逻辑下移，避免提前 return 跳出
-
-    // 2. 处理 Dify 事件
+    // 处理 Dify 事件
     for (const e of events || []) {
       if (e.event === 'agent_thought') {
         parseThought(e.thought || '', routing, tasks, emotions, state);
@@ -216,6 +199,7 @@ export function useEventParser({ events, initialQuery, initialAttachments, lastA
       const ev = parseEvidence(lastAssistantMessage.content || '');
       if (ev) {
         if (ev.product) state.productModel = ev.product === 'Anker737' ? 'Anker 737' : ev.product;
+        if (ev.emotion) state.emotion = ev.emotion;
         if (ev.node) state.currentNode = ev.node;
         if (ev.emotion && (ev.emotion as any) !== state.emotionLevel) {
           state.emotionLevel = ev.emotion as any;

@@ -72,6 +72,8 @@ export interface TroubleshootingState {
   };
   /** 契约 B：会话摘要（模型产出，透传） */
   summary?: string;
+  /** 契约 B：情绪档位 L0–L3（模型判定） */
+  emotion?: string;
   /** 契约 B：本轮意图数组（待 A 端回填 state.intents） */
   intents?: string[];
   /** 契约 B：排障追问的可点选项（最多 3 个） */
@@ -84,6 +86,15 @@ export interface TroubleshootingState {
   safetyLatched?: boolean;
   /** 契约 B：用户档案（待 A 端回填 state.user） */
   user?: UserProfile;
+}
+
+// ========== 用户辅助气泡（B2）==========
+
+export interface UserInsight {
+  emotion?: string;
+  intents?: string[];
+  product?: string;
+  keyInfo?: string;
 }
 
 // ========== 用户档案 ==========

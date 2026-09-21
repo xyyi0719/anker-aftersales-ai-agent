@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, KeyboardEvent } from 'react';
-import type { ChatMessage } from '../types';
+import type { ChatMessage, UserInsight } from '../types';
 import MessageBubble from './MessageBubble';
 import {
   IconSend,
@@ -16,6 +16,8 @@ interface Props {
   onSend: (text: string, files?: Array<{ type: string; url: string }>) => void;
   onReset: () => void;
   error: string | null;
+  /** 仅挂到最后一条用户消息下方（B2） */
+  userInsight?: UserInsight;
 }
 
 const DEMO_PRESETS: Array<{ label: string; query: string; icon?: string }> = [
@@ -31,7 +33,9 @@ export default function ChatWindow({
   onSend,
   onReset,
   error,
+  userInsight,
 }: Props) {
+  const lastUserId = [...messages].reverse().find(m => m.role === 'user')?.id;
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -143,6 +147,7 @@ export default function ChatWindow({
               message={m}
               onConfirmProduct={(_id, name) => onSend(`我指的是 ${name}`)}
               isStreaming={isStreaming}
+              insight={m.role === 'user' && m.id === lastUserId ? userInsight : undefined}
             />
           ))
         )}

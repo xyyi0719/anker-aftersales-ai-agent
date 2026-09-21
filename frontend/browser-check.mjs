@@ -128,7 +128,7 @@ try {
   respondState = {
     schema_version: 1, mock: true,
     summary: '在排查 737 充不进电，已确认换线无效，卡在屏幕反应确认',
-    product: 'Anker737', node: 'cable',
+    product: '', node: 'cable',
     tasks: [{ kind: 'troubleshooting', status: 'waiting_user' }, { kind: 'safety', status: 'escalated' }],
     citations: [{ chunk_id: 'faq_anker737_f1', text: '检查墙插、线与充电头。', metadata: { source: 'FAQ 快照', source_url: 'https://service.anker.com' } }],
   };
@@ -158,6 +158,42 @@ try {
   const byKind = Object.fromEntries(tagColors.map(t => [t.kind, t.color]));
   assert(byKind.safety && byKind.troubleshooting, '诉求标签未渲染');
   assert(byKind.safety !== byKind.troubleshooting, 'safety 与 troubleshooting 标签颜色相同');
+
+  // ===== B2：用户气泡情绪/理解辅助（只挂用户消息）=====
+  respondState = {
+    schema_version: 1, mock: true,
+    product: 'Anker737', emotion: 'L2', node: 'start',
+    intents: ['troubleshooting'],
+    tasks: [{ kind: 'troubleshooting', status: 'waiting_user' }],
+  };
+  const beforeB2 = requests.length;
+  await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.type('textarea', '快气死我了，我的737充不进电');
+  await page.keyboard.press('Enter');
+  for (let i = 0; i < 60 && requests.length === beforeB2; i++) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 500));
+
+  const ubText = await page.evaluate(() => {
+    const b = document.querySelector('.understanding-bubble');
+    return b ? b.innerText : '';
+  });
+  assert(ubText.includes('明显愤怒'), '用户气泡未按 L2 显示「明显愤怒」');
+  assert(/理解为：\s*故障报修\s*·\s*Anker\s*737\s*·\s*充不进电/.test(ubText), '理解为三要素未同行以 · 分隔');
+  assert(await page.evaluate(() => document.querySelectorAll('.message-bubble-row.ai-side .understanding-bubble').length === 0),
+    'AI 气泡下方出现了辅助气泡');
+  assert(await page.evaluate(() => document.querySelectorAll('.understanding-bubble').length === 1),
+    '辅助气泡应只挂在最后一条用户消息下');
+
+  // L0 且无其它信息：不得出现 unknown
+  respondState = { schema_version: 1, mock: true, product: '', emotion: 'L0', tasks: [] };
+  const beforeB2b = requests.length;
+  await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.type('textarea', '你好');
+  await page.keyboard.press('Enter');
+  for (let i = 0; i < 60 && requests.length === beforeB2b; i++) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 400));
+  const ubText2 = await page.evaluate(() => document.querySelector('.understanding-bubble')?.innerText || '');
+  assert(!/unknown/i.test(ubText2), '未识别项出现了 unknown 字样');
 
   // ===== B4：解释性文案清理与状态词 =====
   const cleanedText = await page.evaluate(() => document.body.innerText);

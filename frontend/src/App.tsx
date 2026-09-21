@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useDifyChat } from './hooks/useDifyChat';
 import { useEventParser } from './hooks/useEventParser';
+import { extractKeyInfo } from './utils/inference';
+import type { UserInsight } from './types';
 import ChatWindow from './components/ChatWindow';
 import DefenseMatrix from './components/DefenseMatrix';
 import SidePanel from './components/SidePanel';
@@ -37,6 +39,14 @@ export default function App() {
   const privilegeRequested = chat.messages.some(
     m => m.role === 'user' && /退款|退货|赔偿|补偿|退钱|退一赔三/.test(m.content || '')
   );
+
+  // B2 用户辅助气泡：情绪/意图/产品只取服务与模型给的值，关键信息取自用户原话
+  const userInsight: UserInsight = {
+    emotion: state.emotion,
+    intents: state.intents,
+    product: state.productModel,
+    keyInfo: extractKeyInfo(initialQuery),
+  };
 
   return (
     <div className="anker-workbench-app">
@@ -85,6 +95,7 @@ export default function App() {
             onSend={(query, files) => chat.send({ query, files })}
             onReset={chat.reset}
             error={chat.error}
+            userInsight={userInsight}
           />
         </section>
 

@@ -1964,3 +1964,29 @@ body {
   color: var(--anker-cyan);
   margin-left: 4px;
 }
+
+/* --------------------------------------------------------------------------
+   12. 用户消息下方的情绪与理解辅助气泡 (B2)
+   -------------------------------------------------------------------------- */
+.understanding-bubble {
+  margin-top: 6px;
+  padding: 6px 10px;
+  background: rgba(0, 132, 255, 0.08);
+  border: 1px solid rgba(0, 132, 255, 0.18);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ub-line {
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ub-ico {
+  font-size: 11px;
+}

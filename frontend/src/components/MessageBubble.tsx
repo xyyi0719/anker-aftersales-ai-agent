@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { ChatMessage } from '../types';
+import type { ChatMessage, UserInsight } from '../types';
 import {
   IconUser,
   IconAnkerLogo,
@@ -8,15 +8,18 @@ import {
   IconSparkles,
 } from './SvgIcons';
 import ProductDisambigCard, { type ProductCandidate } from './ProductDisambigCard';
+import UnderstandingBubble from './UnderstandingBubble';
 import { safeSource } from '../utils/evidence';
 
 interface Props {
   message: ChatMessage;
   onConfirmProduct: (id: string, name: string) => void;
   isStreaming?: boolean;
+  /** 仅最后一条用户消息带：情绪与理解辅助（B2） */
+  insight?: UserInsight;
 }
 
-export default function MessageBubble({ message, onConfirmProduct, isStreaming }: Props) {
+export default function MessageBubble({ message, onConfirmProduct, isStreaming, insight }: Props) {
   const isUser = message.role === 'user';
   const rawContent = message.content || '';
 
@@ -144,6 +147,8 @@ export default function MessageBubble({ message, onConfirmProduct, isStreaming }
             </details>
           )}
         </div>
+
+        {isUser && insight && <UnderstandingBubble {...insight} />}
       </div>
     </article>
   );
