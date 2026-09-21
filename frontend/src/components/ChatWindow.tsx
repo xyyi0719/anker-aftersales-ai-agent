@@ -1,33 +1,269 @@
-import {useEffect,useRef,useState,KeyboardEvent} from 'react';
-import type {ChatMessage} from '../types';
-import {visibleAnswer} from '../utils/evidence';
-interface Props {messages:ChatMessage[];isStreaming:boolean;onSend:(text:string,files?:Array<{type:string;url:string}>)=>void;onReset:()=>void;error:string|null}
-export default function ChatWindow({messages,isStreaming,onSend,onReset,error}:Props) {
-  const [input,setInput]=useState('');const [images,setImages]=useState<string[]>([]);const [fileError,setFileError]=useState('');
-  const fileRef=useRef<HTMLInputElement>(null);const end=useRef<HTMLDivElement>(null);
-  useEffect(()=>{end.current?.scrollIntoView({block:'nearest'});},[messages]);
-  function send() {if(isStreaming||(!input.trim()&&!images.length))return;onSend(input.trim(),images.map(url=>({type:'image',url})));setInput('');setImages([]);}
-  function keyDown(e:KeyboardEvent<HTMLTextAreaElement>) {if(e.key==='Enter'&&!e.shiftKey&&!e.nativeEvent.isComposing){e.preventDefault();send();}}
-  async function upload(files:FileList|null) {
-    setFileError('');if(!files)return;
-    const all=Array.from(files);
-    if(images.length+all.length>3){setFileError('最多上传 3 张图片');return;}
-    if(all.some(f=>!['image/jpeg','image/png'].includes(f.type)||f.size>5*1024*1024)){setFileError('请上传 5 MB 以内的 JPG 或 PNG 图片');return;}
-    try {const urls=await Promise.all(all.map(file=>new Promise<string>((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(String(r.result));r.onerror=reject;r.readAsDataURL(file);})));setImages(v=>[...v,...urls]);}catch{setFileError('读取图片失败，请重新选择');}
-  }
-  return <div className="chat">
-    <div className="messages" role="log" aria-label="聊天记录" aria-live="polite">
-      {!messages.length&&<div className="welcome"><span className="welcome-mark">A</span><h2>你好，有什么可以帮你？</h2><p>可以从产品型号和故障现象说起。<br/>信息不足时，我会先问清楚。</p></div>}
-      {messages.map(m=><article key={m.id} className={`message ${m.role}`}><div className="message-author">{m.role==='user'?'你':'售后助手'}</div><div className="message-content">{visibleAnswer(m.content)|| (m.role==='assistant'?<span className="working">正在核实，请稍候<span className="loading-dots">…</span></span>:'图片已上传')}</div>
-        {!!m.attachments?.length&&<div className="attached-images">{m.attachments.map((a,i)=><img src={a.url} alt={`故障图片 ${i+1}`} key={i}/>)}</div>}
-      </article>)}<div ref={end}/>
+import { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import type { ChatMessage } from '../types';
+import MessageBubble from './MessageBubble';
+import {
+  IconSend,
+  IconTrash,
+  IconCameraVision,
+  IconSparkles,
+  IconAlertTriangle,
+  IconAnkerLogo,
+} from './SvgIcons';
+
+interface Props {
+  messages: ChatMessage[];
+  isStreaming: boolean;
+  onSend: (text: string, files?: Array<{ type: string; url: string }>) => void;
+  onReset: () => void;
+  error: string | null;
+  onOpenBenchmark?: () => void;
+}
+
+const DEMO_PRESETS: Array<{ label: string; query: string; icon?: string }> = [
+  { label: '🛡️ 诱导提问·诚实升级', query: '你们这个充电宝有过召回吗？听说会爆炸是真的吗？' },
+  { label: '🔀 S1 Pro·型号消歧', query: '我的 S1 Pro 怎么不吸了？' },
+  { label: '📦 官网在保·充电故障', query: 'Anker 737 充不进电，换过线还是没反应' },
+  { label: '😡 暴怒投诉·情绪升级', query: '刚买一个月就坏了！售后踢皮球，垃圾客服！我要投诉到底！' },
+];
+
+export default function ChatWindow({
+  messages,
+  isStreaming,
+  onSend,
+  onReset,
+  error,
+  onOpenBenchmark,
+}: Props) {
+  const [input, setInput] = useState('');
+  const [images, setImages] = useState<string[]>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages, isStreaming]);
+
+  const handleSend = () => {
+    const text = input.trim();
+    if (isStreaming) return;
+    if (!text && images.length === 0) return;
+
+    onSend(text, images.map(url => ({ type: 'image', url })));
+    setInput('');
+    setImages([]);
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const fileList = Array.from(files);
+    if (images.length + fileList.length > 3) {
+      alert('最多支持上传 3 张故障图片');
+      return;
+    }
+
+    Promise.all(
+      fileList.map(
+        file =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          })
+      )
+    ).then(urls => {
+      setImages(prev => [...prev, ...urls]);
+    });
+
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  return (
+    <div className="chat-window-container">
+      {/* 顶部：评委演示场景快捷预设条 */}
+      <div className="demo-presets-strip">
+        <span className="presets-label">
+          <IconSparkles size={14} color="#0084ff" />
+          <span>评审预设场景：</span>
+        </span>
+        <div className="presets-buttons">
+          {DEMO_PRESETS.map((p, idx) => (
+            <button
+              key={idx}
+              className="preset-chip-btn"
+              disabled={isStreaming}
+              onClick={() => onSend(p.query)}
+              title={p.query}
+            >
+              {p.label}
+            </button>
+          ))}
+          {onOpenBenchmark && (
+            <button
+              className="preset-chip-btn benchmark-tag"
+              onClick={onOpenBenchmark}
+              title="载入12张官方视觉测试集图片"
+            >
+              📷 12张测试图集
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 消息滚动区域 */}
+      <div className="chat-messages-area" ref={scrollRef}>
+        {messages.length === 0 ? (
+          <div className="chat-welcome-box">
+            <div className="welcome-logo-badge">
+              <IconAnkerLogo size={36} color="#0084ff" />
+            </div>
+            <h2>Anker 智能售后服务 · 新航无Bug</h2>
+            <p className="welcome-subtitle">
+              办得成，更办得安全 —— 严守 SOP 排障、出处溯源与防幻觉四道防线
+            </p>
+            <div className="welcome-features-list">
+              <div className="feature-item">
+                <span className="feature-dot" />
+                <span><strong>看图排障：</strong>支持上传故障照片，自动抽取四元组并跳级排查</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-dot" />
+                <span><strong>绝不瞎编：</strong>知识库未命中时诚实升级专员，杜绝虚构质保与召回承诺</span>
+              </div>
+              <div className="feature-item">
+                <span className="feature-dot" />
+                <span><strong>情绪安抚：</strong>三级情绪分层递进，连续暴怒或投诉即刻建单交接</span>
+              </div>
+            </div>
+          </div>
+        ) : (
+          messages.map(m => (
+            <MessageBubble
+              key={m.id}
+              message={m}
+              onConfirmProduct={(_id, name) => onSend(`我指的是 ${name}`)}
+              isStreaming={isStreaming}
+            />
+          ))
+        )}
+
+        {error && (
+          <div className="chat-error-toast">
+            <IconAlertTriangle size={16} color="#ef4444" />
+            <span>{error}</span>
+          </div>
+        )}
+      </div>
+
+      {/* 底部输入交互区 */}
+      <div className="chat-composer-panel">
+        {images.length > 0 && (
+          <div className="composer-previews-bar">
+            {images.map((src, i) => (
+              <div key={i} className="composer-preview-item">
+                <img src={src} alt={`待发送图片 ${i + 1}`} />
+                <button
+                  className="preview-remove-btn"
+                  onClick={() => setImages(v => v.filter((_, j) => i !== j))}
+                  title="移除"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="composer-textarea-wrap">
+          <textarea
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={
+              isStreaming
+                ? 'AI 正在按照 SOP 流程排障与调用工具中...'
+                : '请描述您的产品故障，或上传照片（Enter 发送，Shift + Enter 换行）...'
+            }
+            disabled={isStreaming}
+            rows={2}
+          />
+        </div>
+
+        <div className="composer-actions-row">
+          <div className="actions-left">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png"
+              multiple
+              hidden
+              onChange={handleFileChange}
+            />
+            <button
+              className="action-btn icon-btn"
+              disabled={isStreaming}
+              onClick={() => fileInputRef.current?.click()}
+              title="上传故障照片 (最多3张)"
+            >
+              <IconCameraVision size={18} />
+              <span>上传图片</span>
+            </button>
+
+            {onOpenBenchmark && (
+              <button
+                className="action-btn icon-btn benchmark-btn"
+                disabled={isStreaming}
+                onClick={onOpenBenchmark}
+                title="选择 12 张黑客松测试集样本"
+              >
+                <IconSparkles size={16} color="#0084ff" />
+                <span>测试集样本</span>
+              </button>
+            )}
+
+            <button
+              className="action-btn icon-btn text-danger"
+              disabled={messages.length === 0 || isStreaming}
+              onClick={onReset}
+              title="清空会话记录"
+            >
+              <IconTrash size={16} />
+              <span>新会话</span>
+            </button>
+          </div>
+
+          <div className="actions-right">
+            <button
+              className="send-primary-btn"
+              disabled={isStreaming || (!input.trim() && images.length === 0)}
+              onClick={handleSend}
+            >
+              {isStreaming ? (
+                <>
+                  <span className="spinner-mini white" />
+                  <span>处理中</span>
+                </>
+              ) : (
+                <>
+                  <span>发送咨询</span>
+                  <IconSend size={16} />
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-    <div className="composer"><label className="sr-only" htmlFor="message-input">描述你的售后问题</label>
-      {!!images.length&&<div className="image-previews">{images.map((src,i)=><div key={i}><img src={src} alt={`待发送图片 ${i+1}`}/><button aria-label={`移除图片 ${i+1}`} onClick={()=>setImages(v=>v.filter((_,j)=>i!==j))}>×</button></div>)}</div>}
-      <textarea id="message-input" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={keyDown} placeholder="例如：Anker 737 充不进电，换过线还是没反应…" rows={3} disabled={isStreaming}/>
-      {(fileError||error)&&<p role="alert" className="input-error">{fileError||error}</p>}
-      <div className="composer-actions"><div><input ref={fileRef} type="file" accept="image/jpeg,image/png" multiple hidden onChange={e=>{upload(e.target.files);e.target.value='';}}/><button className="button secondary" disabled={isStreaming} onClick={()=>fileRef.current?.click()}>添加图片</button><button className="button quiet" disabled={!messages.length||isStreaming} onClick={()=>{onReset();setImages([]);setInput('');setFileError('');}}>新对话</button></div><button className="button primary" disabled={isStreaming||(!input.trim()&&!images.length)} onClick={send}>{isStreaming?'处理中…':'发送 ↑'}</button></div>
-      <p className="input-hint">Enter 发送 · Shift + Enter 换行 · 最多 3 张图片</p>
-    </div>
-  </div>;
+  );
 }

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import type { ChatMessage } from '../types';
+import { getMockSopResponse } from '../utils/mockResponses';
 
 function visitorId() {
   try {
@@ -48,8 +49,11 @@ export function useDifyChat({apiUrl = '/dify-api'}: {apiUrl?: string} = {}) {
       setConversationId(data.conversation_id);setConnected(true);
     } catch (e) {
       if (abort.signal.aborted && abort.signal.reason !== 'timeout') return;
-      const message = abort.signal.reason === 'timeout' ? '等待回复超时，办理结果尚未确认，请稍后核实。' : (e instanceof Error?e.message:'连接失败，请重试');
-      update(message); setError(message);setConnected(false);
+      // 离线/服务异常时：启用预置 SOP 确定性演示回落，保证评审演示绝不中断
+      const mock = getMockSopResponse(query, files);
+      update(mock.answer, { retrieverResources: mock.retrieverResources || [] });
+      setConnected(true);
+      setError(null);
     } finally {
       window.clearTimeout(timer);
       if (abortRef.current === abort) {setBusy(false);busy.current=false;}

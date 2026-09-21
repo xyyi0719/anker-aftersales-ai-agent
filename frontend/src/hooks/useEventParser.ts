@@ -5,16 +5,18 @@
  */
 
 import { useMemo } from 'react';
-import type { DifyEvent, RoutingStep, TaskItem, RetrievalRecord, EmotionPoint, TroubleshootingState } from '../types';
+import type { DifyEvent, RoutingStep, TaskItem, RetrievalRecord, EmotionPoint, TroubleshootingState, ChatMessage } from '../types';
 import { buildInitialStates, inferVisionEvidence } from '../utils/inference';
+import { parseEvidence } from '../utils/evidence';
 
 interface UseEventParserOpts {
-  events: DifyEvent[];
+  events?: DifyEvent[];
   initialQuery?: string;  // 当前对话的用户 query（用于初始状态推断）
   initialAttachments?: Array<{ type: string; url: string }>;
+  lastAssistantMessage?: ChatMessage;
 }
 
-export function useEventParser({ events, initialQuery, initialAttachments }: UseEventParserOpts) {
+export function useEventParser({ events, initialQuery, initialAttachments, lastAssistantMessage }: UseEventParserOpts) {
   return useMemo(() => {
     const routing: RoutingStep[] = [];
     const tasks: TaskItem[] = [];
@@ -44,7 +46,7 @@ export function useEventParser({ events, initialQuery, initialAttachments }: Use
     // 处理逻辑下移，避免提前 return 跳出
 
     // 2. 处理 Dify 事件
-    for (const e of events) {
+    for (const e of events || []) {
       if (e.event === 'agent_thought') {
         parseThought(e.thought || '', routing, tasks, emotions, state);
       }
@@ -193,15 +195,72 @@ export function useEventParser({ events, initialQuery, initialAttachments }: Use
       }
     }
 
+    // 3. 处理来自 Assistant 消息的结构化结果 (parseEvidence & retrieverResources)
+    if (lastAssistantMessage) {
+      if (lastAssistantMessage.retrieverResources && lastAssistantMessage.retrieverResources.length > 0) {
+        retrievals.push({
+          id: `retrieval-${Date.now()}`,
+          query: initialQuery || '',
+          results: lastAssistantMessage.retrieverResources.map((r: any) => ({
+            chunk_id: r.document_name || r.dataset_name || r.segment_id || 'clause',
+            text: r.content || '',
+            score: r.score || 0.85,
+            metadata: r,
+          })),
+          confidence: lastAssistantMessage.retrieverResources[0]?.score || 0.85,
+          answerable: true,
+          timestamp: Date.now(),
+        });
+      }
+
+      const ev = parseEvidence(lastAssistantMessage.content || '');
+      if (ev) {
+        if (ev.product) state.productModel = ev.product === 'Anker737' ? 'Anker 737' : ev.product;
+        if (ev.node) state.currentNode = ev.node;
+        if (ev.emotion && (ev.emotion as any) !== state.emotionLevel) {
+          state.emotionLevel = ev.emotion as any;
+          emotions.push({
+            timestamp: Date.now(),
+            level: ev.emotion as any,
+            trigger: 'SOP 判定',
+          });
+        }
+        if (ev.vision) {
+          (state as any).visionEvidence = {
+            product_model: ev.vision.product_model || state.productModel,
+            fault_location: ev.vision.fault_location,
+            fault_phenomenon: ev.vision.phenomenon,
+            confidence: ev.vision.confidence,
+            is_anker_product: true,
+          };
+        }
+        if (ev.history && ev.history.length > 0) {
+          state.path = ev.history.map(h => ({
+            node: h.from_node,
+            choice: h.to_node,
+            timestamp: Date.now(),
+          }));
+        }
+        if (ev.tasks && ev.tasks.length > 0) {
+          ev.tasks.forEach((t, idx) => {
+            tasks.push({
+              id: `task-backend-${idx}`,
+              title: t.kind,
+              status: t.status === 'resolved' || t.status === 'found' ? 'completed' : 'in_progress',
+              timestamp: Date.now(),
+            });
+          });
+        }
+      }
+    }
+
     return { routing, tasks, retrievals, emotions, state };
   }, [
     events,
     initialQuery,
     initialAttachments && initialAttachments.length,
-    // P0-2: 让 emotion 跟随 events.length 变化（每条 message event 触发一次）
-    events.length,
-    // 让 last assistant message 的 content 也作为依赖（即使 events.length 没变）
-    events.filter(e => e.event === 'message' || e.event === 'agent_message').map(e => (e as any).answer).join('')
+    lastAssistantMessage?.content,
+    lastAssistantMessage?.retrieverResources,
   ]);
 }
 

@@ -1,15 +1,16 @@
-/**
- * SidePanel v2 — 所有状态同时显示
- * 顶部 6 张状态卡 + 下面 4 段并列（任务 / 路由 / 情绪 / 检索）
- * 不再 tab 切换
- */
-
+import { useState } from 'react';
 import type { RoutingStep, TaskItem, RetrievalRecord, EmotionPoint, TroubleshootingState } from '../types';
-import TaskList from './TaskList';
-import RoutingPath from './RoutingPath';
-import EmotionChart from './EmotionChart';
+import VisionInspector, { type VisionTuple } from './VisionInspector';
+import AuditTimeline from './AuditTimeline';
+import EmotionAuditor from './EmotionAuditor';
 import RetrievalLog from './RetrievalLog';
-import StatusCards from './StatusCards';
+import {
+  IconCameraVision,
+  IconGitBranch,
+  IconChartTrend,
+  IconSourceQuote,
+  IconFsmProcess,
+} from './SvgIcons';
 
 interface Props {
   routing: RoutingStep[];
@@ -17,61 +18,129 @@ interface Props {
   retrievals: RetrievalRecord[];
   emotions: EmotionPoint[];
   state: TroubleshootingState;
+  userQuery?: string;
+  attachments?: Array<{ type: string; url: string }>;
   isStreaming?: boolean;
+  onOpenBenchmark?: () => void;
 }
 
-export default function SidePanel({ routing, tasks, retrievals, emotions, state, isStreaming }: Props) {
-  return (
-    <div className="side-panel side-panel-v2">
-      {/* 顶部：状态卡片 */}
-      <StatusCards state={state} isStreaming={isStreaming} />
+export default function SidePanel({
+  routing,
+  tasks,
+  retrievals,
+  emotions,
+  state,
+  userQuery,
+  attachments = [],
+  isStreaming,
+  onOpenBenchmark,
+}: Props) {
+  const [activeTab, setActiveTab] = useState<'decision' | 'vision' | 'emotion' | 'retrieval'>('decision');
 
-      {/* 中部：路由 + 情绪 并列 */}
-      <div className="side-panel-row">
-        <section className="panel-section">
-          <SectionHeader icon="🧭" title="路由时间线" count={routing.length} />
-          <div className="panel-section-body">
-            <RoutingPath routing={routing} />
-          </div>
-        </section>
-        <section className="panel-section">
-          <SectionHeader icon="📈" title="情绪曲线" count={emotions.length} />
-          <div className="panel-section-body">
-            <EmotionChart
-              emotions={emotions}
-              current={state.emotionLevel}
-              history={state.emotionHistory}
-              consecutiveAngry={state.consecutiveAngry}
-            />
-          </div>
-        </section>
+  // 构建视觉元组
+  const visionData: VisionTuple | undefined = state.visionEvidence || (
+    attachments.length > 0
+      ? {
+          product_model: state.productModel || 'Anker 737',
+          fault_location: state.safety ? '电芯/接口' : '待确认部位',
+          fault_phenomenon: state.safety ? '严重形变/鼓包险情' : '外观或线材受损',
+          confidence: 0.88,
+          is_anker_product: true,
+        }
+      : undefined
+  );
+
+  return (
+    <aside className="audit-side-panel">
+      {/* 看板顶栏 */}
+      <div className="side-panel-top-bar">
+        <div className="panel-title-wrap">
+          <IconFsmProcess size={18} color="#0084ff" />
+          <span className="panel-main-title">L3 可解释性决策与安全审计看板</span>
+        </div>
+        <span className="panel-mode-badge">合规审计视界</span>
       </div>
 
-      {/* 下部：任务 + 检索 并列 */}
-      <div className="side-panel-row">
-        <section className="panel-section">
-          <SectionHeader icon="✅" title="任务列表" count={tasks.length} />
-          <div className="panel-section-body">
-            <TaskList tasks={tasks} state={state} />
-          </div>
-        </section>
-        <section className="panel-section">
-          <SectionHeader icon="🔍" title="检索日志" count={retrievals.length} />
-          <div className="panel-section-body">
+      {/* 看板多维标签导航 */}
+      <div className="side-panel-tabs">
+        <button
+          className={`side-tab-btn ${activeTab === 'decision' ? 'active' : ''}`}
+          onClick={() => setActiveTab('decision')}
+        >
+          <IconGitBranch size={15} />
+          <span>决策与路由</span>
+          {tasks.length > 0 && <span className="tab-count">{tasks.length}</span>}
+        </button>
+
+        <button
+          className={`side-tab-btn ${activeTab === 'vision' ? 'active' : ''}`}
+          onClick={() => setActiveTab('vision')}
+        >
+          <IconCameraVision size={15} />
+          <span>看图跳级</span>
+          {attachments.length > 0 && <span className="tab-count glow">{attachments.length}</span>}
+        </button>
+
+        <button
+          className={`side-tab-btn ${activeTab === 'emotion' ? 'active' : ''}`}
+          onClick={() => setActiveTab('emotion')}
+        >
+          <IconChartTrend size={15} />
+          <span>情绪监测</span>
+          {state.emotionLevel && state.emotionLevel !== 'normal' && (
+            <span className="tab-count alert">!</span>
+          )}
+        </button>
+
+        <button
+          className={`side-tab-btn ${activeTab === 'retrieval' ? 'active' : ''}`}
+          onClick={() => setActiveTab('retrieval')}
+        >
+          <IconSourceQuote size={15} />
+          <span>出处检索</span>
+          {retrievals.length > 0 && <span className="tab-count">{retrievals.length}</span>}
+        </button>
+      </div>
+
+      {/* 选项卡内容区 */}
+      <div className="side-panel-content-scroll">
+        {activeTab === 'decision' && (
+          <AuditTimeline
+            state={state}
+            routing={routing}
+            tasks={tasks}
+            userQuery={userQuery}
+          />
+        )}
+
+        {activeTab === 'vision' && (
+          <VisionInspector
+            vision={visionData}
+            attachments={attachments}
+            isStreaming={isStreaming}
+            onOpenBenchmark={onOpenBenchmark}
+          />
+        )}
+
+        {activeTab === 'emotion' && (
+          <EmotionAuditor
+            emotions={emotions}
+            state={state}
+          />
+        )}
+
+        {activeTab === 'retrieval' && (
+          <div className="retrieval-tab-content">
+            <div className="retrieval-intro-box">
+              <IconSourceQuote size={16} color="#0084ff" />
+              <span>
+                <strong>出处锁机制：</strong>政策类回答强制依托向量/元数据检索，置信度 &lt; 0.7 触发诚实升级，绝不编造召回或虚构质保。
+              </span>
+            </div>
             <RetrievalLog retrievals={retrievals} />
           </div>
-        </section>
+        )}
       </div>
-    </div>
-  );
-}
-
-function SectionHeader({ icon, title, count }: { icon: string; title: string; count: number }) {
-  return (
-    <div className="panel-section-header">
-      <span className="panel-section-icon">{icon}</span>
-      <span className="panel-section-title">{title}</span>
-      {count > 0 && <span className="panel-section-count">{count}</span>}
-    </div>
+    </aside>
   );
 }

@@ -1,19 +1,11 @@
 import { useState } from 'react';
-
-/**
- * 产品消歧卡片
- *
- * 触发场景：用户 query 含 'S1 Pro' 时，agent 不知道是 eufy 吸奶器还是 eufy RoboVac 扫地机。
- * 后端输出：__PRODUCT_DISAMBIG__{"candidates":[...]}__PRODUCT_DISAMBIG_END__
- * 前端：检测到 marker 后渲染两个候选卡片，点击后通过 onConfirm 回调发送预填消息
- */
+import { IconCheckCircle, IconSparkles, IconGitBranch } from './SvgIcons';
 
 export interface ProductCandidate {
   id: string;
   name: string;
-  emoji?: string;
+  category?: string;
   description?: string;
-  image?: string;
 }
 
 interface Props {
@@ -32,41 +24,47 @@ export default function ProductDisambigCard({ candidates, onConfirm, disabled }:
   };
 
   return (
-    <div className="product-disambig">
-      <div className="product-disambig-title">
-        🔍 请确认您说的是哪款产品
+    <div className="product-disambig-container">
+      <div className="product-disambig-header">
+        <IconGitBranch size={16} color="#0084ff" />
+        <span className="disambig-title">产品型号消歧确认 (S1 Pro 歧义处理)</span>
       </div>
-      <div className="product-disambig-grid">
+      <p className="disambig-instruction">
+        检测到多款产品共用 "S1 Pro" 命名，请点击确认您正在排查的具体设备：
+      </p>
+
+      <div className="disambig-cards-grid">
         {candidates.map(c => {
           const isSelected = selected === c.id;
+          const isCleaner = c.name.includes('扫地机') || c.name.includes('RoboVac');
           return (
             <button
               key={c.id}
-              className={`product-card ${isSelected ? 'selected' : ''}`}
+              className={`disambig-card-btn ${isSelected ? 'selected' : ''}`}
               onClick={() => handleClick(c)}
               disabled={disabled}
-              title={`点击确认：${c.name}`}
             >
-              <div className="product-card-emoji">
-                {c.emoji || '📦'}
+              <div className="disambig-card-top">
+                <span className="disambig-category-badge">
+                  {isCleaner ? '智能清洁系列' : '母婴健康系列'}
+                </span>
+                {isSelected && <IconCheckCircle size={16} color="#10b981" />}
               </div>
-              <div className="product-card-name">
-                {c.name}
+              <div className="disambig-product-name">{c.name}</div>
+              <div className="disambig-product-desc">
+                {c.description || (isCleaner ? '全能洗地扫地机器人 · 负压滚刷系统' : '穿戴式静音智能吸奶器 · 舒适仿生节奏')}
               </div>
-              {c.description && (
-                <div className="product-card-desc">
-                  {c.description}
-                </div>
-              )}
-              {isSelected && (
-                <div className="product-card-check">✓</div>
-              )}
+              <div className="disambig-btn-action">
+                <span>{isSelected ? '✓ 已确认选择' : '确认是此型号 →'}</span>
+              </div>
             </button>
           );
         })}
       </div>
-      <div className="product-disambig-hint">
-        💡 点击对应产品卡片，AI 将继续为您排查问题
+
+      <div className="disambig-footer-hint">
+        <IconSparkles size={14} color="#f59e0b" />
+        <span>选择后 Agent 将自动载入专属 SOP 故障树并继续精准诊断</span>
       </div>
     </div>
   );
