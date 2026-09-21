@@ -3,9 +3,13 @@
 这些用例锁定 contract A（extraction）与 contract B（state）的行为。
 违反契约时应当失败，而不是被兜底掩盖。
 """
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 from mock_apis.app import app
+
+from test_dify import code as node_main
 
 
 @pytest.fixture
@@ -17,9 +21,12 @@ def client(tmp_path, monkeypatch):
     return TestClient(app)
 
 
-def turn(client, q, state=None, vision=None, has_image=False):
+def turn(client, q, state=None, vision=None, has_image=False, emotion=None, branch_answer=''):
     body = dict(query=q, conversation_id='contract-conversation', state=state or {}, has_image=has_image)
-    body['extraction'] = dict(vision=vision or {}, intents=[], branch_answer='')
+    extraction = dict(vision=vision or {}, intents=[], branch_answer=branch_answer)
+    if emotion:
+        extraction['emotion'] = emotion
+    body['extraction'] = extraction
     r = client.post('/api/chat/turn', json=body)
     assert r.status_code == 200, r.text
     return r.json()
@@ -151,3 +158,79 @@ def test_benchmark_image_cases(client, cid, query, model, phenomenon, expected):
                          is_anker_product=is_anker))
     assert expected in kinds(r), f'{cid} 期望 {expected}，实际 {kinds(r)}'
     assert r['state'].get('vision', {}).get('fault_phenomenon') == phenomenon
+
+
+# ---------- 对话推进：理解与表达归模型，代码只守边界 ----------
+
+def test_model_emotion_is_used(client):
+    """情绪由模型判断，模型给出的值优先。"""
+    r = turn(client, '你们这个到底行不行', emotion='L2')
+    assert r['state']['emotion'] == 'L2'
+
+
+def test_keyword_emotion_is_only_fallback(client):
+    """模型没给情绪时才用关键词兜底。"""
+    assert turn(client, '垃圾', emotion='L0')['state']['emotion'] == 'L0'
+    assert turn(client, '垃圾')['state']['emotion'] == 'L2'
+
+
+def test_non_answer_sets_repeat_flag_instead_of_hardcoded_wording(client):
+    """用户没回答时，代码只标记「这是重复追问」，换什么说法交给表达层。"""
+    a = turn(client, 'Anker 737 充不进电')
+    assert a['state']['ask_repeat'] is False
+    b = turn(client, '废话，问这个有什么用', a['state'], emotion='L2')
+    assert b['state']['ask_repeat'] is True, '未把重复追问的信号交给表达层'
+    assert ('troubleshooting', 'waiting_user') in kinds(b), '没有继续推进排障'
+
+
+def test_repeated_non_answer_escalates_instead_of_looping(client):
+    """连续答非所问必须升级，这是代码要守的边界。"""
+    a = turn(client, 'Anker 737 充不进电')
+    b = turn(client, '废话', a['state'], emotion='L2')
+    c = turn(client, '你到底在问什么', b['state'], emotion='L2')
+    assert ('handoff', 'mock_pending') in kinds(c), '反复追问仍未升级'
+    assert ('troubleshooting', 'waiting_user') not in kinds(c)
+
+
+def test_answer_after_repeat_still_advances(client):
+    """换说法追问之后再答对，排障仍能继续。"""
+    a = turn(client, 'Anker 737 充不进电')
+    b = turn(client, '废话', a['state'], emotion='L2')
+    c = turn(client, '自己', b['state'])
+    assert c['state']['node'] == 'cable'
+
+
+def test_answer_has_no_self_referential_demo_banner(client):
+    """答复里不再自报"这是演示"。"""
+    r = turn(client, 'Anker 737 充不进电')
+    assert '参赛演示' not in r['answer']
+
+
+# ---------- 表达层的越界拦截（直接跑生成后的 YAML 里的代码节点）----------
+
+def test_composed_answer_out_of_bounds_falls_back():
+    """模型改写的措辞越界时，必须回落到规则服务的原文。"""
+    main = node_main('unpack')
+    body = json.dumps({'answer': '模拟核保：期内，期限 24 个月；最终权益需凭证及故障审核。',
+                       'state': {'schema_version': 1, 'mock': True}})
+    for bad in ['已派单给专员，客服将在 15 分钟内联系您',
+                '我们保证为您免费换新',
+                '尊敬的客户，schema_version 显示已通过']:
+        r = main(body, 200, '{}', bad)
+        assert '24 个月' in r['answer'], f'越界输出未被拦截：{bad}'
+        assert bad not in r['answer']
+
+
+def test_composed_answer_within_bounds_is_used():
+    main = node_main('unpack')
+    body = json.dumps({'answer': '模拟核保：期内，期限 24 个月。', 'state': {'schema_version': 1, 'mock': True}})
+    good = '这台设备还在保修期内，期限 24 个月，最终以凭证和故障审核为准。'
+    r = main(body, 200, '{}', good)
+    assert good in r['answer']
+    assert '__EVIDENCE_V1__' in r['answer']
+
+
+def test_composed_answer_empty_falls_back():
+    main = node_main('unpack')
+    body = json.dumps({'answer': '模拟核保：期内，期限 24 个月。', 'state': {'schema_version': 1, 'mock': True}})
+    assert '24 个月' in main(body, 200, '{}', '')['answer']

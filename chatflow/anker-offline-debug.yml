@@ -1,5 +1,5 @@
 app:
-  description: 参赛模拟：无 Dify 知识库依赖；HTTP 规则服务负责检索、排障状态与模拟工单。
+  description: Anker 售后排障与政策路由；检索、排障状态与工单由规则服务负责，无 Dify 知识库依赖。
   icon: 🤖
   icon_background: '#E4FBCC'
   icon_type: emoji
@@ -60,7 +60,7 @@ workflow:
         video_file_size_limit: 100
         workflow_file_upload_limit: 10
       number_limits: 3
-    opening_statement: 这是参赛演示，订单、权益和工单均为模拟。可输入“Anker 737 充不进电”或“DEMO-US-001 保修多久”。
+    opening_statement: 您好，我是 Anker 售后助手。说说遇到的问题就行，也可以直接发故障照片。
     retriever_resource:
       enabled: false
     sensitive_word_avoidance:
@@ -221,7 +221,7 @@ workflow:
         - key: status_code
           type: number
           value: 503
-    - id: unpack
+    - id: compose
       type: custom
       position:
         x: 1280
@@ -235,15 +235,42 @@ workflow:
       targetPosition: left
       data:
         type: code
+        title: 无模型占位（跳过表达层）
+        desc: ''
+        selected: false
+        code_language: python3
+        code: "def main() -> dict:\n    return {\"text\": \"\"}\n"
+        variables: []
+        outputs:
+          text:
+            type: string
+            children: null
+    - id: unpack
+      type: custom
+      position:
+        x: 1580
+        y: 280
+      positionAbsolute:
+        x: 1580
+        y: 280
+      width: 244
+      height: 120
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: code
         title: 响应验证与失败降级
         desc: ''
         selected: false
         code_language: python3
-        code: "import json\nimport base64\n\ndef main(body: str, status_code: int, previous_state: str) -> dict:\n    try:\n\
-          \        data = json.loads(body)\n        if status_code != 200 or not isinstance(data.get('answer'), str) or not\
-          \ isinstance(data.get('state'), dict):\n            raise ValueError('invalid service response')\n        evidence\
-          \ = base64.b64encode(json.dumps(data['state'], ensure_ascii=False).encode()).decode()\n        return {'answer':\
-          \ data['answer'] + '\\n__EVIDENCE_V1__' + evidence + '__EVIDENCE_END__', 'state': json.dumps(data['state'], ensure_ascii=False)}\n\
+        code: "import json\nimport base64\nimport re\n\n# 表达层的输出由模型生成，属于不可信输入：越界就回落到规则服务的原始文案。\nFORBIDDEN = re.compile(\n\
+          \    r'已派单|已派给|客服(会|将)在|将在\\s*\\d|保证|承诺(退款|赔偿|换新)|一定(能|会)'\n    r'|schema_version|citations|transfer_summary|__EVIDENCE|vision|tasks')\n\
+          \ndef main(body: str, status_code: int, previous_state: str, composed: str) -> dict:\n    try:\n        data = json.loads(body)\n\
+          \        if status_code != 200 or not isinstance(data.get('answer'), str) or not isinstance(data.get('state'), dict):\n\
+          \            raise ValueError('invalid service response')\n        answer = data['answer']\n        if isinstance(composed,\
+          \ str) and composed.strip() and not FORBIDDEN.search(composed):\n            answer = composed.strip()\n       \
+          \ evidence = base64.b64encode(json.dumps(data['state'], ensure_ascii=False).encode()).decode()\n        return {'answer':\
+          \ answer + '\\n__EVIDENCE_V1__' + evidence + '__EVIDENCE_END__', 'state': json.dumps(data['state'], ensure_ascii=False)}\n\
           \    except Exception:\n        return {'answer': '演示服务暂时不可用，当前未完成订单核验或创建工单，请稍后重试或联系真实客服。', 'state': previous_state}\n"
         variables:
         - variable: body
@@ -258,6 +285,10 @@ workflow:
           value_selector:
           - conversation
           - session_state
+        - variable: composed
+          value_selector:
+          - compose
+          - text
         outputs:
           answer:
             type: string
@@ -268,10 +299,10 @@ workflow:
     - id: save
       type: custom
       position:
-        x: 1580
+        x: 1880
         y: 280
       positionAbsolute:
-        x: 1580
+        x: 1880
         y: 280
       width: 244
       height: 120
@@ -295,10 +326,10 @@ workflow:
     - id: answer
       type: custom
       position:
-        x: 1880
+        x: 2180
         y: 280
       positionAbsolute:
-        x: 1880
+        x: 2180
         y: 280
       width: 244
       height: 120
@@ -345,14 +376,25 @@ workflow:
         targetType: http-request
         isInIteration: false
         isInLoop: false
-    - id: service-unpack
+    - id: service-compose
       type: custom
       source: service
-      target: unpack
+      target: compose
       sourceHandle: source
       targetHandle: target
       data:
         sourceType: http-request
+        targetType: code
+        isInIteration: false
+        isInLoop: false
+    - id: compose-unpack
+      type: custom
+      source: compose
+      target: unpack
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: code
         targetType: code
         isInIteration: false
         isInLoop: false

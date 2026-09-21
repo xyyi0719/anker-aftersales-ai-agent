@@ -18,7 +18,7 @@ VISION_HARDWARE = frozenset({'接口损坏', '内部暴露'})
 VISION_DAMAGE = frozenset({'外壳破损'})
 VISION_SCREEN = frozenset({'屏幕异常'})
 
-# Each branch is chosen by an explicit response label or bounded text rule.
+# 状态机只保存「问什么、答什么走哪条路」。怎么说出口由表达层负责，见 chatflow/prompts/09-compose-answer.txt。
 TREES = {
     'Anker737': {
         'start': ('是充电宝自己充不进电，还是不能给其他设备充电？请回复“自己”或“输出”。', {'自己': 'cable', '输出': 'output'}),
@@ -48,7 +48,10 @@ def chat(data):
     if q.strip() in ('重新开始', '重置会话'):
         state = {}
     # Ignore arbitrary model-generated state transitions and policy decisions.
-    emotion = 'L3' if re.search(r'投诉|315|起诉|律师|转人工|人工客服', q) else 'L2' if re.search(r'垃圾|气死|破玩意', q) else 'L1' if re.search(r'失望|不满意|(?<!麻)烦', q) else 'L0'
+    # 情绪由模型判断（契约 A 的 emotion 字段）；正则仅在模型没给出时兜底。
+    emotion = extracted.get('emotion')
+    if emotion not in ('L0', 'L1', 'L2', 'L3'):
+        emotion = 'L3' if re.search(r'投诉|315|起诉|律师|转人工|人工客服', q) else 'L2' if re.search(r'垃圾|气死|破玩意|废话|什么逻辑|怎么这么|傻逼|沙雕|扯淡|糊弄|敷衍|听不懂|复读|耍我|骗人|骗子|坑人|离谱', q) else 'L1' if re.search(r'失望|不满意|(?<!麻)烦', q) else 'L0'
     old_streak = state.get('angry_streak', 0)
     state['angry_streak'] = (old_streak if type(old_streak) is int else 0) + 1 if emotion == 'L2' else 0
     state['emotion'] = emotion
@@ -168,28 +171,48 @@ def chat(data):
                 add('vision', 'waiting_user', '图片与文字或产品信息存在冲突，请先确认准确型号和故障现象。')
             else:
                 normalized = extracted.get('branch_answer', '')
+                matched = None
                 for label, target in tree[node][1].items():
                     if q.strip() == label or (label.lower() in q.lower() and not any(t in q for t in ('不是'+label, '没有'+label, '没'+label, '未'+label))) or normalized == label:
-                        history.append(dict(from_node=node, to_node=target, response=label))
-                        node = target
+                        matched = (label, target)
                         break
-                if node in tree:
+                if not matched:
+                    # 只判断「问了几轮、要不要升级」这条边界；换什么说法由表达层决定。
+                    repeated = state.get('asked_node') == node
+                    streak = (state.get('unanswered_streak') or 0) + 1 if repeated else 1
+                    state['unanswered_streak'] = streak
+                    state['asked_node'] = node
+                    state['ask_repeat'] = repeated
                     state['node'] = node
-                    add('troubleshooting', 'waiting_user', tree[node][0])
-                else:
-                    state.pop('node', None)
-                    if node == 'resolved': add('troubleshooting', 'resolved', '已记录您确认恢复；如再次出现问题请联系售后。')
-                    elif node in ('uvp', 'slow'):
-                        evidence = retrieve(dict(query='UVP' if node == 'uvp' else '充电慢', filters={'product':product}))
-                        if evidence['answerable'] and evidence['results']:
-                            add('troubleshooting', 'answered', evidence['results'][0]['text'])
-                            citations.extend(evidence['results'])
-                        else:
-                            handoff('retrieval_unavailable')
+                    if streak >= (2 if emotion == 'L3' else 3):
+                        add('troubleshooting', 'needs_review', '来回几轮都没对上，先不追问了，把已知信息交给专员核实，避免再占用您的时间。')
+                        handoff('repeated_non_answer')
                     else:
-                        add('troubleshooting', 'needs_review', '交叉排查后仍异常，需售后核实硬件问题；不会自动判定换新。')
-                        state['history'] = history[-30:]
-                        handoff('hardware_review')
+                        add('troubleshooting', 'waiting_user', tree[node][0])
+                else:
+                    label, target = matched
+                    history.append(dict(from_node=node, to_node=target, response=label))
+                    node = target
+                    state['asked_node'] = None
+                    state['unanswered_streak'] = 0
+                    state['ask_repeat'] = False
+                    if node in tree:
+                        state['node'] = node
+                        add('troubleshooting', 'waiting_user', tree[node][0])
+                    else:
+                        state.pop('node', None)
+                        if node == 'resolved': add('troubleshooting', 'resolved', '已记录您确认恢复；如再次出现问题请联系售后。')
+                        elif node in ('uvp', 'slow'):
+                            evidence = retrieve(dict(query='UVP' if node == 'uvp' else '充电慢', filters={'product':product}))
+                            if evidence['answerable'] and evidence['results']:
+                                add('troubleshooting', 'answered', evidence['results'][0]['text'])
+                                citations.extend(evidence['results'])
+                            else:
+                                handoff('retrieval_unavailable')
+                        else:
+                            add('troubleshooting', 'needs_review', '交叉排查后仍异常，需售后核实硬件问题；不会自动判定换新。')
+                            state['history'] = history[-30:]
+                            handoff('hardware_review')
             state['history'] = history[-30:]
         elif not tasks:
             if has_image:
@@ -201,8 +224,6 @@ def chat(data):
                     citations.extend(evidence['results'][:1])
                 else:
                     add('faq', 'no_evidence', '当前资料不足，请补充准确型号与故障；无法核实的事项需要专员确认。')
-    if emotion in ('L1', 'L2'):
-        texts.insert(0, '理解这给您带来的困扰，我们先核实问题；补偿需要专员审核。')
     if citations:
         texts += ['参考快照：' + c['chunk_id'] + (' ' + c['metadata']['source_url'] if c['metadata'].get('source_url') else '（模拟配置）') for c in citations]
     state['tasks'] = tasks
@@ -210,6 +231,6 @@ def chat(data):
     state['vision'] = vision if has_image else {}
     state['schema_version'] = 1
     state['mock'] = True
-    return dict(mock=True, answer='【参赛演示：订单、权益和工单均为模拟】\n' + '\n'.join(texts),
+    return dict(mock=True, answer='\n'.join(texts),
                 state=state, tasks=tasks, citations=citations, transfer_summary=state.get('transfer_summary', {}))
 

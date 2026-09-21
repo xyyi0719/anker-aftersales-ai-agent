@@ -16,6 +16,9 @@ def test_graph_contract():
     assert w['conversation_variables'][0]['name']=='session_state'
     assert any(n['type']=='assigner' for n in nodes.values())
     assert not any(n['type']=='knowledge-retrieval' for n in nodes.values())
+    # 表达层必须夹在规则服务和响应校验之间，且不参与任何判定
+    assert [n['id'] for n in w['graph']['nodes']]==['start','extract','pack','service','compose','unpack','save','answer']
+    assert nodes['compose']['type']=='llm' and nodes['compose']['vision']['enabled'] is False
     for e in w['graph']['edges']:
         assert e['source'] in nodes and e['target'] in nodes
     for n in nodes.values():
@@ -30,9 +33,10 @@ def test_pack_json_escaping():
 
 def test_response_fallback_and_evidence():
     f=code('unpack')
-    r=f('not json',503,'{"node":"cable"}')
+    r=f('not json',503,'{"node":"cable"}','')
     assert r['state']=='{"node":"cable"}' and '未完成' in r['answer']
-    r=f(json.dumps({'answer':'你好','state':{'schema_version':1,'mock':True}}),200,'{}')
+    r=f(json.dumps({'answer':'你好','state':{'schema_version':1,'mock':True}}),200,'{}','您好，请问是什么型号？')
+    assert r['answer'].startswith('您好，请问是什么型号？')
     payload=r['answer'].split('__EVIDENCE_V1__')[1].split('__EVIDENCE_END__')[0]
     assert json.loads(base64.b64decode(payload))['schema_version']==1
 
