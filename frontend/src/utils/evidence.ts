@@ -15,8 +15,21 @@ export interface Evidence {
     confidence?: number;
     is_anker_product?: boolean;
   };
-  ticket?: {ticket_id: string; dispatched: boolean};
+  ticket?: {ticket_id: string; status?: string; dispatched: boolean};
   transfer_summary?: {reason?: string};
+  summary?: string;
+  intents?: string[];
+  options?: Array<{ label: string; value: string }>;
+  order_id?: string;
+  safety_latched?: boolean;
+  user?: {
+    name?: string;
+    tier?: string;
+    order_id?: string;
+    channel?: string;
+    region?: string;
+    warranty?: string;
+  };
 }
 const MARKER = /__EVIDENCE_V1__([A-Za-z0-9+/=]+)__EVIDENCE_END__/;
 export function parseEvidence(content: string): Evidence | null {

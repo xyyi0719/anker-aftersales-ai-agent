@@ -235,6 +235,9 @@ export function useEventParser({ events, initialQuery, initialAttachments, lastA
             confidence: ev.vision.confidence,
             is_anker_product: ev.vision.is_anker_product ?? true,
           };
+        } else {
+          // 无图不留残影：清空上一轮的视觉证据
+          (state as any).visionEvidence = undefined;
         }
         if (ev.history && ev.history.length > 0) {
           state.path = ev.history.map(h => ({
@@ -253,6 +256,15 @@ export function useEventParser({ events, initialQuery, initialAttachments, lastA
             });
           });
         }
+        // 契约 B：只渲染服务/模型给的字段，缺失即当没有（不在前端补全）
+        if (typeof ev.summary === 'string' && ev.summary) state.summary = ev.summary;
+        if (Array.isArray(ev.intents)) state.intents = ev.intents;
+        state.options = Array.isArray(ev.options) ? ev.options.slice(0, 3) : [];
+        state.citations = Array.isArray(ev.citations) ? ev.citations : [];
+        if (ev.ticket) state.ticket = ev.ticket;
+        if (ev.order_id) state.orderId = ev.order_id;
+        if (typeof ev.safety_latched === 'boolean') state.safetyLatched = ev.safety_latched;
+        if (ev.user) state.user = ev.user;
       }
     }
 

@@ -82,14 +82,8 @@ try {
   assert.equal(errors.length, 0, errors.join('\n'));
 
   // ===== 契约 C：审计看板只能显示 evidence 里的真实视觉数据 =====
-  const panelText = async () => {
-    await page.evaluate(() => {
-      const tab = [...document.querySelectorAll('.side-tab-btn')].find(b => b.innerText.includes('看图'));
-      if (tab) tab.click();
-    });
-    await new Promise(r => setTimeout(r, 150));
-    return page.evaluate(() => document.body.innerText);
-  };
+  // 三层看板一次性展示，无需切 tab
+  const panelText = async () => page.evaluate(() => document.body.innerText);
   const ask = async (text, vision) => {
     const before = requests.length;
     respondState = { schema_version: 1, mock: true, product: 'Anker737', node: 'start',
@@ -129,6 +123,41 @@ try {
   text = await panelText();
   assert(text.includes('非 Anker 生态产品'), '非 Anker 未显示拒答横幅');
   assert(text.includes('baseus'), '未显示图上品牌依据');
+
+  // ===== B1：右侧三层看板 =====
+  respondState = {
+    schema_version: 1, mock: true,
+    summary: '在排查 737 充不进电，已确认换线无效，卡在屏幕反应确认',
+    product: 'Anker737', node: 'cable',
+    tasks: [{ kind: 'troubleshooting', status: 'waiting_user' }, { kind: 'safety', status: 'escalated' }],
+    citations: [{ chunk_id: 'faq_anker737_f1', text: '检查墙插、线与充电头。', metadata: { source: 'FAQ 快照', source_url: 'https://service.anker.com' } }],
+  };
+  const beforeB1 = requests.length;
+  await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.type('textarea', '帮我看下充电情况');
+  await page.keyboard.press('Enter');
+  for (let i = 0; i < 60 && requests.length === beforeB1; i++) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 500));
+
+  assert(await page.$('.layer-summary'), '缺少上层容器');
+  assert(await page.$('.layer-profile'), '缺少中层容器');
+  assert(await page.$('.layer-ticket'), '缺少下层容器');
+
+  const b1Text = await page.evaluate(() => document.body.innerText);
+  assert(b1Text.includes('已确认换线无效'), '会话摘要未渲染');
+  for (const oldTab of ['决策与路由', '看图跳级', '情绪监测', '出处检索']) {
+    assert(!b1Text.includes(oldTab), `旧 tab 未移除：${oldTab}`);
+  }
+  assert(b1Text.includes('待提取'), '缺视觉数据时未显示「待提取」');
+  assert(b1Text.includes('faq_anker737_f1'), '处理依据未渲染');
+  assert(b1Text.includes('当前无工单'), '无工单时未显示「当前无工单」');
+
+  const tagColors = await page.evaluate(() =>
+    [...document.querySelectorAll('.demand-tag')].map(el => ({ kind: el.getAttribute('data-kind'), color: getComputedStyle(el).color }))
+  );
+  const byKind = Object.fromEntries(tagColors.map(t => [t.kind, t.color]));
+  assert(byKind.safety && byKind.troubleshooting, '诉求标签未渲染');
+  assert(byKind.safety !== byKind.troubleshooting, 'safety 与 troubleshooting 标签颜色相同');
 
   // ===== B4：解释性文案清理与状态词 =====
   const cleanedText = await page.evaluate(() => document.body.innerText);

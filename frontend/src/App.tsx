@@ -21,7 +21,7 @@ export default function App() {
   const initialAttachments = lastUserMsg?.attachments;
 
   // 聚合解析事件与状态
-  const { routing, tasks, retrievals, emotions, state } = useEventParser({
+  const { tasks, retrievals, state } = useEventParser({
     events: [],
     initialQuery,
     initialAttachments,
@@ -92,12 +92,8 @@ export default function App() {
         {!collapsedSide && (
           <section className="evidence-column-section" aria-label="处理依据">
             <SidePanel
-              routing={routing}
               tasks={tasks}
-              retrievals={retrievals}
-              emotions={emotions}
               state={state}
-              userQuery={initialQuery}
               attachments={initialAttachments}
               isStreaming={chat.isStreaming}
             />

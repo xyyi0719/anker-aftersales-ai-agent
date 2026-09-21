@@ -70,6 +70,31 @@ export interface TroubleshootingState {
     confidence: number;
     is_anker_product: boolean;
   };
+  /** 契约 B：会话摘要（模型产出，透传） */
+  summary?: string;
+  /** 契约 B：本轮意图数组（待 A 端回填 state.intents） */
+  intents?: string[];
+  /** 契约 B：排障追问的可点选项（最多 3 个） */
+  options?: Array<{ label: string; value: string }>;
+  /** 契约 B：依据快照，中层「处理依据」渲染 */
+  citations?: Array<{ chunk_id: string; text: string; metadata?: { source?: string; source_url?: string } }>;
+  /** 契约 B：模拟工单及其状态 */
+  ticket?: { ticket_id: string; status?: string; dispatched?: boolean };
+  orderId?: string;
+  safetyLatched?: boolean;
+  /** 契约 B：用户档案（待 A 端回填 state.user） */
+  user?: UserProfile;
+}
+
+// ========== 用户档案 ==========
+
+export interface UserProfile {
+  name?: string;
+  tier?: string;
+  order_id?: string;
+  channel?: string;
+  region?: string;
+  warranty?: string;
 }
 
 // ========== 路由路径 ==========
