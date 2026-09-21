@@ -1,0 +1,12 @@
+[
+  {"user_id": "U-1001", "name": "王先生", "tier": "金卡", "joined": "2023-04-12", "tickets_count": 2, "complaints_count": 0, "note": "历史均为质量类问题，无投诉记录"},
+  {"user_id": "U-1002", "name": "李女士", "tier": "银卡", "joined": "2024-01-08", "tickets_count": 1, "complaints_count": 0, "note": "偏好邮件沟通"},
+  {"user_id": "U-1003", "name": "张先生", "tier": "金卡", "joined": "2022-11-30", "tickets_count": 4, "complaints_count": 1, "note": "有一次投诉记录，已和解"},
+  {"user_id": "U-1004", "name": "陈女士", "tier": "普通", "joined": "2025-06-19", "tickets_count": 0, "complaints_count": 0, "note": "首次购买用户"},
+  {"user_id": "U-1005", "name": "刘先生", "tier": "银卡", "joined": "2023-09-02", "tickets_count": 1, "complaints_count": 0, "note": "曾咨询保修范围"},
+  {"user_id": "U-1006", "name": "赵女士", "tier": "金卡", "joined": "2021-03-25", "tickets_count": 5, "complaints_count": 0, "note": "多年老用户，复购频繁"},
+  {"user_id": "U-1007", "name": "孙先生", "tier": "普通", "joined": "2025-10-11", "tickets_count": 0, "complaints_count": 0, "note": "新用户，暂无历史"},
+  {"user_id": "U-1008", "name": "周女士", "tier": "银卡", "joined": "2024-07-07", "tickets_count": 2, "complaints_count": 0, "note": "退换货一次，流程正常"},
+  {"user_id": "U-1009", "name": "吴先生", "tier": "普通", "joined": "2025-02-14", "tickets_count": 1, "complaints_count": 0, "note": "咨询类问题居多"},
+  {"user_id": "U-1010", "name": "郑女士", "tier": "金卡", "joined": "2022-05-20", "tickets_count": 3, "complaints_count": 2, "note": "有两次投诉记录，需注意沟通语气"}
+]

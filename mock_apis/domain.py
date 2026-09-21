@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 ORDERS = {o['order_id']: o for o in json.loads((ROOT/'data/orders.json').read_text())}
+USERS = {u['user_id']: u for u in json.loads((ROOT/'data/users.json').read_text())}
 POLICIES = json.loads((ROOT.parent/'knowledge_base/policy_routing.json').read_text())['rules']
 CHANNELS = {'official':'official_site','jd':'tmall_jd','tmall':'tmall_jd','douyin':'tmall_jd'}
 
@@ -42,6 +43,15 @@ def warranty(order_id):
     return dict(order, warranty_months=months, warranty_end_date=end.isoformat(), warranty_expires=end.isoformat(),
                 in_warranty=start<=today<=end, days_remaining=max(0,(end-today).days), as_of=today.isoformat(),
                 reason='demo_only_subject_to_receipt_and_fault_review')
+
+def user_profile(user_id):
+    """模拟用户档案。orders_count 由订单实时统计，不写死在档案里；查不到就显式返回 not found。"""
+    user = USERS.get(user_id) if user_id else None
+    if not user:
+        return dict(found=False, mock=True, user_id=user_id or '')
+    owned = sorted(o['order_id'] for o in ORDERS.values() if o.get('user_id') == user_id)
+    return dict(user, found=True, mock=True, orders_count=len(owned), order_ids=owned)
+
 
 def policy_evidence(query, order_id):
     order = order_lookup(order_id)

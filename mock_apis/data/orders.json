@@ -1,6 +1,7 @@
 [
   {
     "order_id": "ANK-2024-001",
+    "user_id": "U-1001",
     "product_model": "Anker 737",
     "product_category": "power_bank",
     "purchase_date": "2024-03-15",
@@ -11,6 +12,7 @@
   },
   {
     "order_id": "ANK-2024-002",
+    "user_id": "U-1002",
     "product_model": "Anker 737",
     "product_category": "power_bank",
     "purchase_date": "2022-06-20",
@@ -21,6 +23,7 @@
   },
   {
     "order_id": "ANK-2024-003",
+    "user_id": "U-1003",
     "product_model": "Anker 737",
     "product_category": "power_bank",
     "purchase_date": "2024-09-01",
@@ -31,6 +34,7 @@
   },
   {
     "order_id": "ANK-2024-004",
+    "user_id": "U-1004",
     "product_model": "Anker 335",
     "product_category": "power_bank",
     "purchase_date": "2024-07-10",
@@ -41,6 +45,7 @@
   },
   {
     "order_id": "ANK-2024-005",
+    "user_id": "U-1005",
     "product_model": "Soundcore Liberty 4",
     "product_category": "earbuds",
     "purchase_date": "2024-05-22",
@@ -51,6 +56,7 @@
   },
   {
     "order_id": "ANK-2024-006",
+    "user_id": "U-1006",
     "product_model": "Soundcore Life P3",
     "product_category": "earbuds",
     "purchase_date": "2023-01-15",
@@ -61,6 +67,7 @@
   },
   {
     "order_id": "ANK-2024-007",
+    "user_id": "U-1007",
     "product_model": "eufy RoboVac 11S",
     "product_category": "robot_vacuum",
     "purchase_date": "2024-02-08",
@@ -71,6 +78,7 @@
   },
   {
     "order_id": "ANK-2024-008",
+    "user_id": "U-1008",
     "product_model": "Anker 525",
     "product_category": "power_bank",
     "purchase_date": "2024-08-30",
@@ -81,6 +89,7 @@
   },
   {
     "order_id": "ANK-2024-009",
+    "user_id": "U-1009",
     "product_model": "Anker 737",
     "product_category": "power_bank",
     "purchase_date": "2024-04-12",
@@ -91,6 +100,7 @@
   },
   {
     "order_id": "ANK-2024-010",
+    "user_id": "U-1010",
     "product_model": "Soundcore Liberty 4",
     "product_category": "earbuds",
     "purchase_date": "2024-06-18",
@@ -101,6 +111,7 @@
   },
   {
     "order_id": "ANK-2024-011",
+    "user_id": "U-1001",
     "product_model": "Anker 335",
     "product_category": "power_bank",
     "purchase_date": "2024-09-20",
@@ -111,6 +122,7 @@
   },
   {
     "order_id": "ANK-2024-012",
+    "user_id": "U-1002",
     "product_model": "Anker 737",
     "product_category": "power_bank",
     "purchase_date": "2024-10-05",
@@ -121,6 +133,7 @@
   },
   {
     "order_id": "ANK-2024-013",
+    "user_id": "U-1003",
     "product_model": "eufy S1 Pro",
     "product_category": "robot_vacuum",
     "purchase_date": "2024-05-30",
@@ -131,6 +144,7 @@
   },
   {
     "order_id": "ANK-2024-014",
+    "user_id": "U-1004",
     "product_model": "Anker 737",
     "product_category": "power_bank",
     "purchase_date": "2022-12-01",
@@ -141,6 +155,7 @@
   },
   {
     "order_id": "ANK-2024-015",
+    "user_id": "U-1005",
     "product_model": "Soundcore Liberty 4",
     "product_category": "earbuds",
     "purchase_date": "2024-07-25",
@@ -151,6 +166,7 @@
   },
   {
     "order_id": "ANK-2024-016",
+    "user_id": "U-1006",
     "product_model": "Anker 525",
     "product_category": "power_bank",
     "purchase_date": "2024-11-12",
@@ -161,6 +177,7 @@
   },
   {
     "order_id": "ANK-2024-017",
+    "user_id": "U-1007",
     "product_model": "Anker 335",
     "product_category": "power_bank",
     "purchase_date": "2024-09-25",
@@ -171,6 +188,7 @@
   },
   {
     "order_id": "ANK-2024-018",
+    "user_id": "U-1008",
     "product_model": "eufy RoboVac 11S",
     "product_category": "robot_vacuum",
     "purchase_date": "2024-03-30",
@@ -181,6 +199,7 @@
   },
   {
     "order_id": "ANK-2024-019",
+    "user_id": "U-1009",
     "product_model": "Anker 737",
     "product_category": "power_bank",
     "purchase_date": "2024-08-15",
@@ -191,6 +210,7 @@
   },
   {
     "order_id": "ANK-2024-020",
+    "user_id": "U-1010",
     "product_model": "Soundcore Life P3",
     "product_category": "earbuds",
     "purchase_date": "2024-10-20",
@@ -201,6 +221,7 @@
   },
   {
     "order_id": "DEMO-US-001",
+    "user_id": "U-1001",
     "product_model": "Anker 737",
     "product_category": "power_bank",
     "region": "US",
@@ -209,6 +230,7 @@
   },
   {
     "order_id": "DEMO-AMZ-001",
+    "user_id": "U-1002",
     "product_model": "Anker 737",
     "product_category": "power_bank",
     "region": "US",
@@ -217,6 +239,7 @@
   },
   {
     "order_id": "DEMO-CN-001",
+    "user_id": "U-1003",
     "product_model": "Anker 737",
     "product_category": "power_bank",
     "region": "CN",

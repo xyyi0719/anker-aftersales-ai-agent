@@ -9,6 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 from mock_apis.app import app
 from mock_apis.engine import TREES, OPTION_LABELS, options_for
+from mock_apis.domain import order_lookup, user_profile
 
 from test_dify import code as node_main
 
@@ -22,8 +23,9 @@ def client(tmp_path, monkeypatch):
     return TestClient(app)
 
 
-def turn(client, q, state=None, vision=None, has_image=False, emotion=None, branch_answer='', summary=None):
-    body = dict(query=q, conversation_id='contract-conversation', state=state or {}, has_image=has_image)
+def turn(client, q, state=None, vision=None, has_image=False, emotion=None, branch_answer='', summary=None,
+         conv='contract-conversation'):
+    body = dict(query=q, conversation_id=conv, state=state or {}, has_image=has_image)
     extraction = dict(vision=vision or {}, intents=[], branch_answer=branch_answer)
     if emotion:
         extraction['emotion'] = emotion
@@ -33,6 +35,20 @@ def turn(client, q, state=None, vision=None, has_image=False, emotion=None, bran
     r = client.post('/api/chat/turn', json=body)
     assert r.status_code == 200, r.text
     return r.json()
+
+
+def make_ticket(client, q='Anker 737 鼓包了', conv='contract-conversation'):
+    """跑一轮会生成工单的对话，返回 (ticket_id, conversation_id)。"""
+    r = turn(client, q, conv=conv)
+    ticket = r['state'].get('ticket') or {}
+    assert ticket.get('ticket_id'), f'这一轮没有生成工单：{r["state"].get("tasks")}'
+    return ticket['ticket_id'], conv
+
+
+def act(client, conv, action, ticket_id, headers=None):
+    return client.post('/api/chat/action',
+                       json=dict(conversation_id=conv, action=action, ticket_id=ticket_id),
+                       headers=headers)
 
 
 def kinds(result):
@@ -337,3 +353,167 @@ def test_composed_answer_empty_falls_back():
     main = node_main('unpack')
     body = json.dumps({'answer': '模拟核保：期内，期限 24 个月。', 'state': {'schema_version': 1, 'mock': True}})
     assert '24 个月' in main(body, 200, '{}', '')['answer']
+
+
+# ---------- A2：用户档案 ----------
+
+DEMO_ORDERS = ['DEMO-US-001', 'DEMO-AMZ-001', 'DEMO-CN-001']
+
+
+@pytest.mark.parametrize('order_id', DEMO_ORDERS)
+def test_demo_order_holder_has_a_profile(order_id):
+    """每位 DEMO 订单持有者都必须能在 users.json 查到，否则中层档案是空的。"""
+    order = order_lookup(order_id)
+    assert order['found']
+    uid = order.get('user_id')
+    assert uid, f'{order_id} 没有关联用户'
+    profile = user_profile(uid)
+    assert profile['found'], f'{uid} 不在 users.json 里'
+    for field in ('name', 'tier', 'joined', 'orders_count'):
+        assert profile.get(field) not in (None, ''), f'档案缺字段 {field}'
+    assert profile['orders_count'] >= 1
+
+
+def test_every_order_links_to_a_known_user():
+    """订单的 user_id 不能指向不存在的档案。"""
+    from mock_apis.domain import ORDERS
+    for oid, order in ORDERS.items():
+        uid = order.get('user_id')
+        assert uid, f'{oid} 没有 user_id'
+        assert user_profile(uid)['found'], f'{oid} 关联的 {uid} 不存在'
+
+
+def test_unknown_user_is_not_fabricated():
+    """查不到的档案要显式 found=False，不许返回假姓名。"""
+    profile = user_profile('U-NOT-A-REAL-USER')
+    assert profile['found'] is False
+    assert not profile.get('name')
+
+
+def test_orders_count_is_computed_not_hardcoded():
+    """orders_count 必须由订单数据算出来，不能写死在档案里。"""
+    from mock_apis.domain import ORDERS
+    uid = order_lookup('DEMO-US-001')['user_id']
+    expected = sum(1 for o in ORDERS.values() if o.get('user_id') == uid)
+    assert user_profile(uid)['orders_count'] == expected
+
+
+# ---------- A2：转派动作接口 ----------
+
+def test_transfer_succeeds(client):
+    ticket_id, conv = make_ticket(client)
+    r = act(client, conv, 'transfer_to_agent', ticket_id)
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert data['ok'] is True
+    assert data['ticket']['status'] == 'transfer_requested'
+    assert data['ticket']['dispatched'] is False, '未对接真实队列，dispatched 必须为 false'
+
+
+def test_transfer_is_idempotent(client):
+    ticket_id, conv = make_ticket(client)
+    first = act(client, conv, 'transfer_to_agent', ticket_id).json()
+    second = act(client, conv, 'transfer_to_agent', ticket_id).json()
+    assert second['ok'] is True
+    assert second['ticket']['status'] == first['ticket']['status'] == 'transfer_requested'
+
+
+def test_non_whitelisted_action_is_rejected(client):
+    """权限锁的边界：接口本身也不接受退款、补偿这类动作。"""
+    ticket_id, conv = make_ticket(client)
+    for action in ('refund', 'compensate', 'transfer_to_human', ''):
+        assert act(client, conv, action, ticket_id).status_code == 400, f'{action} 未被拒绝'
+
+
+def test_unknown_ticket_returns_404(client):
+    """归属校验优先：用自己的会话 ID 去查一个从未生成的工单，才是 404。"""
+    from mock_apis.routes.tickets import ticket_id_for
+    conv = 'never-escalated'
+    assert act(client, conv, 'transfer_to_agent', ticket_id_for(conv)).status_code == 404
+
+
+def test_mismatched_ticket_id_is_forbidden(client):
+    """会话对不上任何工单时按越权处理，不泄露其它工单是否存在。"""
+    make_ticket(client, conv='someone-else')
+    from mock_apis.routes.tickets import ticket_id_for
+    assert act(client, 'contract-conversation', 'transfer_to_agent',
+               ticket_id_for('someone-else')).status_code == 403
+
+
+def test_ticket_ownership_is_enforced(client):
+    """工单 ID 是会话哈希，用别人的 conversation_id 必须被拒。"""
+    ticket_id, _ = make_ticket(client, conv='owner-conversation')
+    assert act(client, 'someone-else', 'transfer_to_agent', ticket_id).status_code == 403
+
+
+def test_action_requires_api_key(client, monkeypatch):
+    ticket_id, conv = make_ticket(client)
+    monkeypatch.setenv('MOCK_API_KEY', 'test-key')
+    assert act(client, conv, 'transfer_to_agent', ticket_id).status_code == 401
+    assert act(client, conv, 'transfer_to_agent', ticket_id,
+               headers={'X-API-Key': 'test-key'}).status_code == 200
+
+
+def test_action_input_validation(client):
+    assert client.post('/api/chat/action', json={'action': 'transfer_to_agent'}).status_code == 422
+    assert client.post('/api/chat/action', json={'conversation_id': 'x', 'action': 'transfer_to_agent'}).status_code == 422
+
+
+def test_transferred_status_is_readable_next_turn(client):
+    """转派后，下一轮对话的 state.ticket.status 必须是新状态，不能被覆盖回 mock_pending。"""
+    ticket_id, conv = make_ticket(client)
+    act(client, conv, 'transfer_to_agent', ticket_id)
+    r = turn(client, 'Anker 737 鼓包了', conv=conv)
+    assert r['state']['ticket']['status'] == 'transfer_requested'
+    assert r['state']['ticket']['dispatched'] is False
+
+
+# ---------- A2：旧库迁移 ----------
+
+def test_status_column_migrates_from_legacy_db(tmp_path, monkeypatch):
+    """线上已有的是 (id, summary) 两列旧库；CREATE TABLE IF NOT EXISTS 不会补列，
+    必须靠显式迁移，否则线上第一次转派就会 500。"""
+    import sqlite3
+    from mock_apis.routes.tickets import _connect, transfer, ticket_id_for
+
+    db = tmp_path / 'legacy.sqlite3'
+    conn = sqlite3.connect(db)
+    conn.execute('CREATE TABLE tickets (id TEXT PRIMARY KEY, summary TEXT NOT NULL)')
+    conn.execute('INSERT INTO tickets VALUES (?,?)', ('MOCK-LEGACY0000000000', '{"node":"hardware"}'))
+    conn.commit()
+    conn.close()
+
+    monkeypatch.setenv('TICKET_DB', str(db))
+
+    migrated = _connect(db)
+    cols = {row[1] for row in migrated.execute('PRAGMA table_info(tickets)')}
+    assert 'status' in cols, '旧库没有被补上 status 列'
+    rows = list(migrated.execute('SELECT id, summary, status FROM tickets'))
+    assert len(rows) == 1 and rows[0][0] == 'MOCK-LEGACY0000000000', '迁移过程把已有工单弄丢了'
+    assert rows[0][2] is None, '旧工单的 status 应为空，由读取方兜底成 mock_pending'
+
+    # 旧工单迁移后也要能被转派
+    session = 'legacy-conversation'
+    conn2 = sqlite3.connect(db)
+    conn2.execute('INSERT INTO tickets (id,summary) VALUES (?,?)', (ticket_id_for(session), '{}'))
+    conn2.commit()
+    conn2.close()
+    assert transfer(session, ticket_id_for(session))['ok'] is True
+
+
+def test_migration_runs_only_once(tmp_path, monkeypatch):
+    """重复打开同一库不应报错（迁移必须幂等）。"""
+    from mock_apis.routes.tickets import _connect
+    db = tmp_path / 'repeat.sqlite3'
+    for _ in range(3):
+        _connect(db).execute('SELECT 1').fetchone()
+    cols = {row[1] for row in _connect(db).execute('PRAGMA table_info(tickets)')}
+    assert cols == {'id', 'summary', 'status'}
+
+
+def test_openapi_spec_is_current():
+    """openapi_spec.json 要跟当前 app 一致——它会被上传到 Dify 做工具集成，过期就会误导接入方。"""
+    from pathlib import Path
+    from mock_apis.app import app as current_app
+    spec = json.loads((Path(__file__).resolve().parents[1] / 'mock_apis/openapi_spec.json').read_text())
+    assert spec == current_app.openapi(), 'openapi_spec.json 已过期，需重新生成'

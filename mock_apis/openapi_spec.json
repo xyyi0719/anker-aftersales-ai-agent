@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Anker 售后 Mock API",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "paths": {
     "/api/orders/{order_id}": {
@@ -197,6 +197,45 @@
         }
       }
     },
+    "/api/chat/action": {
+      "post": {
+        "tags": [
+          "actions"
+        ],
+        "summary": "Run",
+        "operationId": "run_api_chat_action_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -268,6 +307,31 @@
   },
   "components": {
     "schemas": {
+      "ActionRequest": {
+        "properties": {
+          "conversation_id": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Conversation Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "ticket_id": {
+            "type": "string",
+            "title": "Ticket Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "conversation_id",
+          "action",
+          "ticket_id"
+        ],
+        "title": "ActionRequest"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
