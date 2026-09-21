@@ -63,6 +63,7 @@ export interface TroubleshootingState {
   path: Array<{ node: string; choice: string; timestamp: number }>;
   toolCalls: Array<{ name: string; input: any; output?: any; timestamp: number; status: 'running' | 'success' | 'failed' }>;
   visionEvidence?: {
+    brand?: string;
     product_model: string;
     fault_location: string;
     fault_phenomenon: string;

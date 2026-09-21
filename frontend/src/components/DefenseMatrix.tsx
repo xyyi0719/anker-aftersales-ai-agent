@@ -128,7 +128,7 @@ export default function DefenseMatrix({ state, citationsCount, isStreaming }: Pr
             </span>
             <span className="defense-lock-name">第三道 · 置信度锁</span>
             <span className={`defense-status-pill ${isAdversarialOrLowConf ? 'warning' : 'success'}`}>
-              {isAdversarialOrLowConf ? '触发防御' : '门限 ≥ 0.75'}
+              {isAdversarialOrLowConf ? '触发防御' : '门限 ≥ 0.8'}
             </span>
           </div>
           <div className="defense-card-main">

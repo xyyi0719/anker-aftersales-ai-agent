@@ -7,7 +7,14 @@ export interface Evidence {
   tasks?: Array<{kind: string; status: string}>;
   citations?: Array<{chunk_id: string; text: string; metadata?: {source?: string; source_url?: string}}>;
   history?: Array<{from_node: string; to_node: string; reason?: string; response?: string}>;
-  vision?: {product_model?: string; fault_location?: string; phenomenon?: string; confidence?: number};
+  vision?: {
+    brand?: string;
+    product_model?: string;
+    fault_location?: string;
+    fault_phenomenon?: string;
+    confidence?: number;
+    is_anker_product?: boolean;
+  };
   ticket?: {ticket_id: string; dispatched: boolean};
   transfer_summary?: {reason?: string};
 }

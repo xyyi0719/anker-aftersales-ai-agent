@@ -1136,6 +1136,12 @@ body {
 .tuple-value.danger { color: #ef4444; }
 .tuple-value.success { color: #10b981; }
 
+.tuple-sub {
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
 .vision-skip-banner {
   display: flex;
   gap: 10px;

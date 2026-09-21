@@ -37,18 +37,9 @@ export default function SidePanel({
 }: Props) {
   const [activeTab, setActiveTab] = useState<'decision' | 'vision' | 'emotion' | 'retrieval'>('decision');
 
-  // 构建视觉元组
-  const visionData: VisionTuple | undefined = state.visionEvidence || (
-    attachments.length > 0
-      ? {
-          product_model: state.productModel || 'Anker 737',
-          fault_location: state.safety ? '电芯/接口' : '待确认部位',
-          fault_phenomenon: state.safety ? '严重形变/鼓包险情' : '外观或线材受损',
-          confidence: 0.88,
-          is_anker_product: true,
-        }
-      : undefined
-  );
+  // 契约 C：四元组只来自 evidence.vision 的真实数据；
+  // 没有数据时交给 VisionInspector 显示"待提取"，不在此处编造型号或置信度。
+  const visionData: VisionTuple | undefined = state.visionEvidence;
 
   return (
     <aside className="audit-side-panel">

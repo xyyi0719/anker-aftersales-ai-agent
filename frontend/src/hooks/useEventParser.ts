@@ -225,13 +225,15 @@ export function useEventParser({ events, initialQuery, initialAttachments, lastA
             trigger: 'SOP 判定',
           });
         }
-        if (ev.vision) {
+        // 契约 B：无图时 vision 为 {}，此时不生成四元组卡片，避免用文字推断冒充视觉结论
+        if (ev.vision && Object.keys(ev.vision).length > 0) {
           (state as any).visionEvidence = {
+            brand: ev.vision.brand,
             product_model: ev.vision.product_model || state.productModel,
             fault_location: ev.vision.fault_location,
-            fault_phenomenon: ev.vision.phenomenon,
+            fault_phenomenon: ev.vision.fault_phenomenon,
             confidence: ev.vision.confidence,
-            is_anker_product: true,
+            is_anker_product: ev.vision.is_anker_product ?? true,
           };
         }
         if (ev.history && ev.history.length > 0) {
