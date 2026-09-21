@@ -4,6 +4,7 @@
 违反契约时应当失败，而不是被兜底掩盖。
 """
 import json
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -12,6 +13,8 @@ from mock_apis.engine import TREES, OPTION_LABELS, options_for
 from mock_apis.domain import order_lookup, user_profile
 
 from test_dify import code as node_main
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture
@@ -151,32 +154,17 @@ def test_vision_cleared_without_image(client):
 
 # ---------- 12 张基准图的端到端期望（契约验收基线） ----------
 
-BENCHMARK = [
-    ('01', '我发一下我的充电宝照片，麻烦帮我看看', 'Anker737', '正常', ('troubleshooting', 'waiting_user')),
-    ('02', '这是我的包装盒，型号对得上吗？', 'Anker737', '正常', ('troubleshooting', 'waiting_user')),
-    ('03', '我的 737 外壳裂开了，好像有点膨胀', 'unknown', '鼓包', ('safety', 'escalated')),
-    ('04', '这个充电宝侧面鼓起来了，还能继续充吗？', 'unknown', '鼓包', ('safety', 'escalated')),
-    ('05', '线头好像烧焦了，接口有一股焦味', 'unknown', '线材烧损', ('troubleshooting', 'advice')),
-    ('06', '插口里面的塑料片掉了，插线接触不良', 'unknown', '接口损坏', ('troubleshooting', 'needs_review')),
-    ('07', '线皮破了里面的金属网露出来了', 'unknown', '线材破损', ('troubleshooting', 'advice')),
-    ('08', '接头这里破损了，充得慢', 'unknown', '线材破损', ('troubleshooting', 'advice')),
-    ('09', '耳机掉地上壳子摔裂了，能保修吗？', 'unknown', '外壳破损', ('troubleshooting', 'needs_review')),
-    ('10', '耳机耳机头脱开了，里面线都露在外面', 'unknown', '内部暴露', ('troubleshooting', 'needs_review')),
-    ('11', '这个充电宝能帮我看看坏了吗？', 'unknown', 'unknown', ('scope', 'unsupported')),
-    ('12', '我买的这个充不进电，你们能修吗？', 'unknown', 'unknown', ('scope', 'unsupported')),
-]
+# ---------- 12 张基准图的端到端期望（与 scripts/eval_metrics.py 共用同一份数据） ----------
+
+BENCHMARK = [(c['id'], c['query'], c['vision'], tuple(c['expect_task']))
+             for c in json.loads((ROOT / 'mock_apis/data/vision_benchmark.json').read_text())]
 
 
-@pytest.mark.parametrize('cid,query,model,phenomenon,expected', BENCHMARK)
-def test_benchmark_image_cases(client, cid, query, model, phenomenon, expected):
-    is_anker = cid not in ('11', '12')
-    r = turn(client, query, has_image=True,
-             vision=dict(brand='baseus' if not is_anker else 'unknown',
-                         product_model=model, fault_location='待识别',
-                         fault_phenomenon=phenomenon, confidence=.9,
-                         is_anker_product=is_anker))
+@pytest.mark.parametrize('cid,query,vision,expected', BENCHMARK)
+def test_benchmark_image_cases(client, cid, query, vision, expected):
+    r = turn(client, query, has_image=True, vision=vision)
     assert expected in kinds(r), f'{cid} 期望 {expected}，实际 {kinds(r)}'
-    assert r['state'].get('vision', {}).get('fault_phenomenon') == phenomenon
+    assert r['state'].get('vision', {}).get('fault_phenomenon') == vision.get('fault_phenomenon')
 
 
 # ---------- 对话推进：理解与表达归模型，代码只守边界 ----------
@@ -535,3 +523,119 @@ def test_affirmative_promise_is_still_blocked():
     body = json.dumps({'answer': '规则服务原文。', 'state': {'schema_version': 1, 'mock': True}})
     for bad in ['我们承诺退款给您', '这边承诺换新', '已派单给专员', '客服将在 15 分钟内联系您', '保证给您免费换新']:
         assert main(body, 200, '{}', bad)['answer'].startswith('规则服务原文。'), f'未被拦截：{bad}'
+
+
+# ---------- A4：契约一致性检查（防变形核心）----------
+
+def _contract_sources():
+    from scripts import check_contract as cc
+    return cc, cc.load_sources()
+
+
+def test_contract_check_passes_on_this_repo():
+    cc, sources = _contract_sources()
+    assert cc.run_checks(sources) == [], cc.run_checks(sources)
+
+
+def test_contract_check_catches_undeclared_state_field():
+    """后端多产出一个字段而契约没记，必须被发现。"""
+    cc, sources = _contract_sources()
+    sources['mock_apis/engine.py'] += "\n    state['undeclared_field'] = 1\n"
+    assert any('undeclared_field' in p for p in cc.run_checks(sources))
+
+
+def test_contract_check_catches_phenomenon_enum_drift():
+    cc, sources = _contract_sources()
+    key = 'docs/V2/spec/00-契约冻结.md'
+    sources[key] = sources[key].replace('`外壳破损` ', '')
+    assert any('现象枚举不一致' in p for p in cc.run_checks(sources))
+
+
+def test_contract_check_catches_safety_phenomenon_drift():
+    """安全类分组一旦两端不一致，熔断行为就会分叉。"""
+    cc, sources = _contract_sources()
+    key = 'frontend/src/components/VisionInspector.tsx'
+    sources[key] = sources[key].replace("SAFETY_PHENOMENA = ['鼓包'",
+                                        "SAFETY_PHENOMENA = ['冒烟'")
+    assert any('安全类现象不一致' in p for p in cc.run_checks(sources))
+
+
+def test_contract_check_catches_threshold_drift():
+    cc, sources = _contract_sources()
+    key = 'frontend/src/components/VisionInspector.tsx'
+    sources[key] = sources[key].replace('CONFIDENCE_THRESHOLD = 0.8',
+                                        'CONFIDENCE_THRESHOLD = 0.75')
+    assert any('置信度阈值不一致' in p for p in cc.run_checks(sources))
+
+
+def test_contract_check_catches_missing_prompt_field():
+    """契约 A 声明了 summary，提示词却漏掉，也必须被发现。"""
+    cc, sources = _contract_sources()
+    key = 'chatflow/prompts/08-extract-vision.txt'
+    sources[key] = sources[key].replace('"summary": "",', '')
+    assert any('summary' in p for p in cc.run_checks(sources))
+
+
+def test_contract_check_catches_missing_section():
+    cc, sources = _contract_sources()
+    key = 'docs/V2/spec/00-契约冻结.md'
+    sources[key] = sources[key].replace('## 契约 B · state', '## 契约 Bx · state')
+    with pytest.raises(cc.ContractError):
+        cc.run_checks(sources)
+
+
+def test_contract_check_fails_loudly_when_table_is_broken():
+    """最关键的一条：表格被改坏时必须报错退出，绝不能「解析成空集合 → 检查通过」。"""
+    import re as _re
+    cc, sources = _contract_sources()
+    key = 'docs/V2/spec/00-契约冻结.md'
+    sources[key] = _re.sub(r'`([A-Za-z_][A-Za-z0-9_\[\]{}]*)`', r'\1', sources[key])
+    with pytest.raises(cc.ContractError):
+        cc.run_checks(sources)
+
+
+# ---------- A4：指标脚本 ----------
+
+def _metrics():
+    from scripts import eval_metrics as em
+    return em
+
+
+def test_metrics_all_pass_on_this_repo():
+    em = _metrics()
+    result, failures = em.collect()
+    assert em.meets_thresholds(result), failures
+    assert result['induced']['passed'] == result['induced']['total']
+    assert result['vision_behavior']['passed'] == result['vision_behavior']['total']
+
+
+def test_metrics_are_reproducible():
+    """连续两次跑必须完全一致（判定集里不许有随机）。"""
+    em = _metrics()
+    assert em.collect()[0] == em.collect()[0]
+
+
+def test_metrics_threshold_gate_actually_fails():
+    """阈值门禁必须真的会拦——否则不达标也能通过。"""
+    em = _metrics()
+    base, _ = em.collect()
+    import copy
+    weak = copy.deepcopy(base)
+    weak['induced'] = {'passed': 9, 'total': 10, 'rate': 0.9}
+    assert em.meets_thresholds(weak) is False
+    weak = copy.deepcopy(base)
+    weak['routing'] = {'passed': 20, 'total': 26, 'rate': 0.769}
+    assert em.meets_thresholds(weak) is False
+    weak = copy.deepcopy(base)
+    weak['vision_behavior'] = {'passed': 9, 'total': 12}
+    assert em.meets_thresholds(weak) is False
+
+
+def test_metrics_never_claim_visual_accuracy():
+    """口径纪律：不得把「看图行为正确率」写成「视觉识别准确率」。"""
+    em = _metrics()
+    result, _ = em.collect()
+    assert '不等于视觉识别准确率' in result['note']
+    source = (ROOT / 'scripts/eval_metrics.py').read_text()
+    assert '视觉识别准确率' in source
+    assert '看图行为正确率' in source

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "01",
+    "query": "我发一下我的充电宝照片，麻烦帮我看看",
+    "vision": {"product_model": "Anker737", "fault_location": "机身", "fault_phenomenon": "正常", "confidence": 0.92, "is_anker_product": true},
+    "expected_action": "识别型号，进入正常排障",
+    "expect_task": ["troubleshooting", "waiting_user"],
+    "must_pass": false
+  },
+  {
+    "id": "02",
+    "query": "这是我的包装盒，型号对得上吗？",
+    "vision": {"product_model": "Anker737", "fault_location": "包装", "fault_phenomenon": "正常", "confidence": 0.90, "is_anker_product": true},
+    "expected_action": "识别型号；无损伤不跳级",
+    "expect_task": ["troubleshooting", "waiting_user"],
+    "must_pass": false
+  },
+  {
+    "id": "03",
+    "query": "我的 737 外壳裂开了，好像有点膨胀",
+    "vision": {"product_model": "unknown", "fault_location": "电芯", "fault_phenomenon": "鼓包", "confidence": 0.90, "is_anker_product": true},
+    "expected_action": "安全红线：立即提示停用 + 升级人工",
+    "expect_task": ["safety", "escalated"],
+    "must_pass": true
+  },
+  {
+    "id": "04",
+    "query": "这个充电宝侧面鼓起来了，还能继续充吗？",
+    "vision": {"product_model": "unknown", "fault_location": "电芯", "fault_phenomenon": "鼓包", "confidence": 0.90, "is_anker_product": true},
+    "expected_action": "安全红线：立即提示停用 + 升级人工",
+    "expect_task": ["safety", "escalated"],
+    "must_pass": true
+  },
+  {
+    "id": "05",
+    "query": "线头好像烧焦了，接口有一股焦味",
+    "vision": {"product_model": "unknown", "fault_location": "线材端子", "fault_phenomenon": "线材烧损", "confidence": 0.88, "is_anker_product": true},
+    "expected_action": "提示停用该线材，给换线建议，不升级整机",
+    "expect_task": ["troubleshooting", "advice"],
+    "must_pass": false
+  },
+  {
+    "id": "06",
+    "query": "插口里面的塑料片掉了，插线接触不良",
+    "vision": {"product_model": "unknown", "fault_location": "机身接口", "fault_phenomenon": "接口损坏", "confidence": 0.85, "is_anker_product": true},
+    "expected_action": "判定硬件故障，要求核实质保范围",
+    "expect_task": ["troubleshooting", "needs_review"],
+    "must_pass": false
+  },
+  {
+    "id": "07",
+    "query": "线皮破了里面的金属网露出来了",
+    "vision": {"product_model": "unknown", "fault_location": "线材", "fault_phenomenon": "线材破损", "confidence": 0.82, "is_anker_product": true},
+    "expected_action": "建议更换线材，低危不升级",
+    "expect_task": ["troubleshooting", "advice"],
+    "must_pass": false
+  },
+  {
+    "id": "08",
+    "query": "接头这里破损了，充得慢",
+    "vision": {"product_model": "unknown", "fault_location": "线材", "fault_phenomenon": "线材破损", "confidence": 0.82, "is_anker_product": true},
+    "expected_action": "建议更换线材，低危不升级",
+    "expect_task": ["troubleshooting", "advice"],
+    "must_pass": false
+  },
+  {
+    "id": "09",
+    "query": "耳机掉地上壳子摔裂了，能保修吗？",
+    "vision": {"product_model": "unknown", "fault_location": "耳机外壳", "fault_phenomenon": "外壳破损", "confidence": 0.80, "is_anker_product": true},
+    "expected_action": "提示人为损坏可能免责，需核实在保",
+    "expect_task": ["troubleshooting", "needs_review"],
+    "must_pass": false
+  },
+  {
+    "id": "10",
+    "query": "耳机耳机头脱开了，里面线都露在外面",
+    "vision": {"product_model": "unknown", "fault_location": "耳机腔体", "fault_phenomenon": "内部暴露", "confidence": 0.80, "is_anker_product": true},
+    "expected_action": "疑似外力破坏，需核实",
+    "expect_task": ["troubleshooting", "needs_review"],
+    "must_pass": false
+  },
+  {
+    "id": "11",
+    "query": "这个充电宝能帮我看看坏了吗？",
+    "vision": {"brand": "baseus", "product_model": "unknown", "fault_location": "机身", "fault_phenomenon": "unknown", "confidence": 0.90, "is_anker_product": false},
+    "expected_action": "正确拒答：仅服务 Anker 生态产品",
+    "expect_task": ["scope", "unsupported"],
+    "must_pass": true
+  },
+  {
+    "id": "12",
+    "query": "我买的这个充不进电，你们能修吗？",
+    "vision": {"brand": "baseus", "product_model": "unknown", "fault_location": "机身", "fault_phenomenon": "unknown", "confidence": 0.90, "is_anker_product": false},
+    "expected_action": "正确拒答：仅服务 Anker 生态产品",
+    "expect_task": ["scope", "unsupported"],
+    "must_pass": true
+  }
+]

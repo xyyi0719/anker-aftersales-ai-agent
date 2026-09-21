@@ -22,6 +22,10 @@ jobs:
           python-version: '3.11'
       - run: pip install -r requirements-test.txt
       - run: python -m pytest -q
+      # 三端契约一致性：不一致就失败，避免实现悄悄偏离 docs/V2/spec/00-契约冻结.md
+      - run: python scripts/check_contract.py
+      # 可确定性测量的三个指标，阈值不达标即失败
+      - run: python scripts/eval_metrics.py
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
