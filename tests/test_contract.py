@@ -8,6 +8,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 from mock_apis.app import app
+from mock_apis.engine import TREES, OPTION_LABELS, options_for
 
 from test_dify import code as node_main
 
@@ -21,11 +22,13 @@ def client(tmp_path, monkeypatch):
     return TestClient(app)
 
 
-def turn(client, q, state=None, vision=None, has_image=False, emotion=None, branch_answer=''):
+def turn(client, q, state=None, vision=None, has_image=False, emotion=None, branch_answer='', summary=None):
     body = dict(query=q, conversation_id='contract-conversation', state=state or {}, has_image=has_image)
     extraction = dict(vision=vision or {}, intents=[], branch_answer=branch_answer)
     if emotion:
         extraction['emotion'] = emotion
+    if summary is not None:
+        extraction['summary'] = summary
     body['extraction'] = extraction
     r = client.post('/api/chat/turn', json=body)
     assert r.status_code == 200, r.text
@@ -204,6 +207,106 @@ def test_answer_has_no_self_referential_demo_banner(client):
     """答复里不再自报"这是演示"。"""
     r = turn(client, 'Anker 737 充不进电')
     assert '参赛演示' not in r['answer']
+
+
+# ---------- A1：引导选项 options ----------
+
+def test_first_ask_carries_two_options(client):
+    """排障首问必须带可点选项，value 是故障树选项键。"""
+    r = turn(client, 'Anker 737 充不进电')
+    opts = r['state']['options']
+    assert [o['value'] for o in opts] == ['自己', '输出']
+
+
+def test_option_labels_are_plain_language(client):
+    """选项文案要说人话，不能把系统词直接摆给用户。"""
+    r = turn(client, 'Anker 737 充不进电')
+    for o in r['state']['options']:
+        assert o['label'] != o['value'], f"选项文案没做人话转换：{o}"
+        for jargon in ('输出', 'UVP'):
+            assert jargon not in o['label'], f"选项文案里出现系统词 {jargon}：{o}"
+
+
+def test_options_never_exceed_three():
+    """任何产品的任何节点，选项上限为 3。"""
+    for product, tree in TREES.items():
+        for node in tree:
+            opts = options_for(product, node)
+            assert len(opts) <= 3, f'{product}/{node} 选项超过 3 个'
+            assert opts, f'{product}/{node} 是追问节点但没有选项'
+
+
+def test_every_option_key_has_a_label():
+    """故障树里的每个选项键都必须有人话文案，否则回退会露出系统词。"""
+    for product, tree in TREES.items():
+        for node, (_, branches) in tree.items():
+            for key in branches:
+                assert key in OPTION_LABELS, f'{product}/{node} 的选项键 {key} 没有配置显示文案'
+
+
+@pytest.mark.parametrize('query', ['Anker 737 鼓包了', '倍思的充电宝坏了',
+                                   'DEMO-US-001 保修多久', '耳机单边没声音'])
+def test_non_ask_replies_carry_no_options(client, query):
+    """安全熔断、边界拒答、政策核保、FAQ 都不带选项。"""
+    assert turn(client, query)['state']['options'] == []
+
+
+def test_option_value_advances_the_tree(client):
+    """把选项的 value 当 query 发回来，排障要能推进。"""
+    a = turn(client, 'Anker 737 充不进电')
+    value = a['state']['options'][0]['value']
+    b = turn(client, value, a['state'])
+    assert b['state']['node'] == 'cable'
+    assert {o['value'] for o in b['state']['options']} == {'仍不行', '恢复了'}
+
+
+def test_free_text_with_branch_answer_advances(client):
+    """不用点选项，用户自由打字由模型归一后同样能推进。"""
+    a = turn(client, 'Anker 737 充不进电')
+    b = turn(client, '给手机充不进去啊', a['state'], branch_answer='输出')
+    assert b['state']['node'] == 'output'
+
+
+def test_options_recomputed_each_turn(client):
+    """选项随节点重算，不复用上一轮的。"""
+    a = turn(client, 'Anker 737 充不进电')
+    b = turn(client, '自己', a['state'])
+    assert [o['value'] for o in a['state']['options']] == ['自己', '输出']
+    assert [o['value'] for o in b['state']['options']] == ['仍不行', '恢复了']
+
+
+# ---------- A1：会话摘要 summary ----------
+
+def test_summary_passthrough_and_carryover(client):
+    """模型给了就用模型的；没给或给了空白要沿用上一轮，绝不在后端拼。"""
+    a = turn(client, 'Anker 737 充不进电', summary='在排查 737 充不进电，刚进入排障')
+    assert a['state']['summary'] == '在排查 737 充不进电，刚进入排障'
+
+    b = turn(client, '自己', a['state'])
+    assert b['state']['summary'] == '在排查 737 充不进电，刚进入排障', '模型没给摘要时应沿用上一轮'
+
+    c = turn(client, '仍不行', b['state'], summary='已确认换线无效，下一步确认屏幕反应')
+    assert c['state']['summary'] == '已确认换线无效，下一步确认屏幕反应'
+
+    d = turn(client, '黑屏', c['state'], summary='   ')
+    assert d['state']['summary'] == '已确认换线无效，下一步确认屏幕反应', '空白摘要不应覆盖已有值'
+
+
+def test_summary_reset_clears_it(client):
+    """新会话必须清空摘要，不能跨会话带过来。"""
+    a = turn(client, 'Anker 737 充不进电', summary='旧会话摘要')
+    b = turn(client, '重新开始', a['state'])
+    assert b['state']['summary'] == ''
+
+
+# ---------- A1：任务携带结构化事实（供表达层组织语言）----------
+
+def test_tasks_carry_message_for_the_composer(client):
+    """每个任务要带 message，表达层才能按事实组织语言而不是改写模板。"""
+    r = turn(client, 'Anker 737 充不进电')
+    for t in r['state']['tasks']:
+        assert set(t) >= {'kind', 'status', 'message'}, f'任务缺少结构化字段：{t}'
+        assert t['message'].strip()
 
 
 # ---------- 表达层的越界拦截（直接跑生成后的 YAML 里的代码节点）----------

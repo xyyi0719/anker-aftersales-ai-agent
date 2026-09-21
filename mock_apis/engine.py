@@ -34,6 +34,29 @@ TREES = {
     },
 }
 
+# 故障树里的键是系统词，用户看不懂。这里做一层「键 → 人话」的显示映射：
+# label 给用户看，value 是故障树选项键（点击时发送的就是 value）。
+# 新增节点时必须同步补这张表，缺项会有测试直接失败。
+OPTION_LABELS = {
+    '自己': '充电宝自己充不进',
+    '输出': '给手机充电不行',
+    '仍不行': '换了也不行',
+    '恢复了': '换完就好了',
+    '黑屏': '屏幕黑屏',
+    '有显示': '屏幕有显示',
+    'UVP': '屏幕显示 UVP',
+    '单边无声': '一边没声音',
+    '无法连接': '连不上',
+}
+
+
+def options_for(product, node):
+    """当前追问节点的人话选项；非追问节点返回空表。上限 3 个。"""
+    tree = TREES.get(product) or {}
+    if node not in tree:
+        return []
+    return [dict(label=OPTION_LABELS.get(key, key), value=key) for key in list(tree[node][1])[:3]]
+
 
 def chat(data):
     q = data.get('query', '')
@@ -60,8 +83,14 @@ def chat(data):
     tasks = []
     texts = []
     citations = []
+    options = []
+    # 摘要由模型产出（契约 A 的 summary）；模型没给或给空白时沿用上一轮，绝不在后端拼。
+    summary = extracted.get('summary')
+    if not isinstance(summary, str) or not summary.strip():
+        summary = state.get('summary') if isinstance(state.get('summary'), str) else ''
     def add(kind, status, message):
-        tasks.append(dict(kind=kind, status=status))
+        # message 随任务一起下发，供表达层按事实组织语言，而不是整段改写模板。
+        tasks.append(dict(kind=kind, status=status, message=message))
         texts.append(message)
     def handoff(reason):
         summary = dict(reason=reason, query=q, product=state.get('product'), order_id=state.get('order_id'),
@@ -188,6 +217,7 @@ def chat(data):
                         add('troubleshooting', 'needs_review', '来回几轮都没对上，先不追问了，把已知信息交给专员核实，避免再占用您的时间。')
                         handoff('repeated_non_answer')
                     else:
+                        options = options_for(product, node)
                         add('troubleshooting', 'waiting_user', tree[node][0])
                 else:
                     label, target = matched
@@ -198,6 +228,7 @@ def chat(data):
                     state['ask_repeat'] = False
                     if node in tree:
                         state['node'] = node
+                        options = options_for(product, node)
                         add('troubleshooting', 'waiting_user', tree[node][0])
                     else:
                         state.pop('node', None)
@@ -228,6 +259,8 @@ def chat(data):
         texts += ['参考快照：' + c['chunk_id'] + (' ' + c['metadata']['source_url'] if c['metadata'].get('source_url') else '（模拟配置）') for c in citations]
     state['tasks'] = tasks
     state['citations'] = citations
+    state['summary'] = summary
+    state['options'] = options
     state['vision'] = vision if has_image else {}
     state['schema_version'] = 1
     state['mock'] = True
