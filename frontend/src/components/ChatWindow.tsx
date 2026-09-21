@@ -101,7 +101,7 @@ export default function ChatWindow({
       <div className="demo-presets-strip">
         <span className="presets-label">
           <IconSparkles size={14} color="#0084ff" />
-          <span>评审预设场景：</span>
+          <span>快捷提问：</span>
         </span>
         <div className="presets-buttons">
           {DEMO_PRESETS.map((p, idx) => (
@@ -127,22 +127,8 @@ export default function ChatWindow({
             </div>
             <h2>Anker 智能售后服务</h2>
             <p className="welcome-subtitle">
-              办得成，更办得安全 —— 严守 SOP 排障、出处溯源与防幻觉四道防线
+              描述您遇到的问题，或上传故障照片；也可以直接点下面的常见问题。
             </p>
-            <div className="welcome-features-list">
-              <div className="feature-item">
-                <span className="feature-dot" />
-                <span><strong>看图排障：</strong>支持上传故障照片，自动抽取四元组并跳级排查</span>
-              </div>
-              <div className="feature-item">
-                <span className="feature-dot" />
-                <span><strong>绝不瞎编：</strong>知识库未命中时诚实升级专员，杜绝虚构质保与召回承诺</span>
-              </div>
-              <div className="feature-item">
-                <span className="feature-dot" />
-                <span><strong>情绪安抚：</strong>三级情绪分层递进，连续暴怒或投诉即刻建单交接</span>
-              </div>
-            </div>
           </div>
         ) : (
           messages.map(m => (
