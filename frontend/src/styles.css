@@ -1990,3 +1990,34 @@ body {
 .ub-ico {
   font-size: 11px;
 }
+
+/* --------------------------------------------------------------------------
+   13. AI 消息下方的可点选项芯片 (B2) —— 快捷方式，弱于正文
+   -------------------------------------------------------------------------- */
+.option-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.option-chip {
+  font-size: 12px;
+  padding: 4px 12px;
+  color: var(--anker-cyan);
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.option-chip:hover:not(:disabled) {
+  background: rgba(56, 189, 248, 0.18);
+  color: #ffffff;
+}
+
+.option-chip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

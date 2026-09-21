@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, KeyboardEvent } from 'react';
-import type { ChatMessage, UserInsight } from '../types';
+import type { ChatMessage, OptionChip, UserInsight } from '../types';
 import MessageBubble from './MessageBubble';
 import {
   IconSend,
@@ -18,6 +18,8 @@ interface Props {
   error: string | null;
   /** 仅挂到最后一条用户消息下方（B2） */
   userInsight?: UserInsight;
+  /** 仅挂到最后一条 AI 消息下方：可点选项芯片（B2） */
+  assistantOptions?: OptionChip[];
 }
 
 const DEMO_PRESETS: Array<{ label: string; query: string; icon?: string }> = [
@@ -34,8 +36,10 @@ export default function ChatWindow({
   onReset,
   error,
   userInsight,
+  assistantOptions,
 }: Props) {
   const lastUserId = [...messages].reverse().find(m => m.role === 'user')?.id;
+  const lastAssistantId = [...messages].reverse().find(m => m.role === 'assistant')?.id;
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -148,6 +152,8 @@ export default function ChatWindow({
               onConfirmProduct={(_id, name) => onSend(`我指的是 ${name}`)}
               isStreaming={isStreaming}
               insight={m.role === 'user' && m.id === lastUserId ? userInsight : undefined}
+              options={m.role === 'assistant' && m.id === lastAssistantId ? assistantOptions : undefined}
+              onOptionSelect={onSend}
             />
           ))
         )}

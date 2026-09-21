@@ -88,6 +88,13 @@ export interface TroubleshootingState {
   user?: UserProfile;
 }
 
+// ========== 可点选项芯片（B2）==========
+
+export interface OptionChip {
+  label: string;
+  value: string;
+}
+
 // ========== 用户辅助气泡（B2）==========
 
 export interface UserInsight {

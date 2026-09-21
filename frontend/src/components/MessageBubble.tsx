@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { ChatMessage, UserInsight } from '../types';
+import type { ChatMessage, OptionChip, UserInsight } from '../types';
 import {
   IconUser,
   IconAnkerLogo,
@@ -9,6 +9,7 @@ import {
 } from './SvgIcons';
 import ProductDisambigCard, { type ProductCandidate } from './ProductDisambigCard';
 import UnderstandingBubble from './UnderstandingBubble';
+import OptionChips from './OptionChips';
 import { safeSource } from '../utils/evidence';
 
 interface Props {
@@ -17,9 +18,12 @@ interface Props {
   isStreaming?: boolean;
   /** 仅最后一条用户消息带：情绪与理解辅助（B2） */
   insight?: UserInsight;
+  /** 仅最后一条 AI 消息带：可点选项芯片（B2） */
+  options?: OptionChip[];
+  onOptionSelect?: (value: string) => void;
 }
 
-export default function MessageBubble({ message, onConfirmProduct, isStreaming, insight }: Props) {
+export default function MessageBubble({ message, onConfirmProduct, isStreaming, insight, options, onOptionSelect }: Props) {
   const isUser = message.role === 'user';
   const rawContent = message.content || '';
 
@@ -149,6 +153,9 @@ export default function MessageBubble({ message, onConfirmProduct, isStreaming, 
         </div>
 
         {isUser && insight && <UnderstandingBubble {...insight} />}
+        {!isUser && options && options.length > 0 && onOptionSelect && (
+          <OptionChips options={options} onSelect={onOptionSelect} disabled={isStreaming} />
+        )}
       </div>
     </article>
   );

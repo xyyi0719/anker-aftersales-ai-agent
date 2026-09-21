@@ -48,6 +48,9 @@ export default function App() {
     keyInfo: extractKeyInfo(initialQuery),
   };
 
+  // B2 可点选项芯片：只取服务给的 options（空则不渲染）
+  const assistantOptions = state.options || [];
+
   return (
     <div className="anker-workbench-app">
       {/* 1. 顶层全局导航条 */}
@@ -96,6 +99,7 @@ export default function App() {
             onReset={chat.reset}
             error={chat.error}
             userInsight={userInsight}
+            assistantOptions={assistantOptions}
           />
         </section>
 

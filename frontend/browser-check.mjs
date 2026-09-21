@@ -195,6 +195,80 @@ try {
   const ubText2 = await page.evaluate(() => document.querySelector('.understanding-bubble')?.innerText || '');
   assert(!/unknown/i.test(ubText2), '未识别项出现了 unknown 字样');
 
+  // ===== B2：可点选项芯片 =====
+  const waitIdle = async () => {
+    for (let i = 0; i < 40; i++) {
+      if (!(await page.evaluate(() => !!document.querySelector('.option-chip:disabled')))) return;
+      await new Promise(r => setTimeout(r, 50));
+    }
+  };
+  respondState = {
+    schema_version: 1, mock: true,
+    product: 'Anker737', node: 'start',
+    options: [
+      { label: '充电宝自己充不进', value: '自己' },
+      { label: '给手机充电不行', value: '输出' },
+    ],
+    tasks: [{ kind: 'troubleshooting', status: 'waiting_user' }],
+  };
+  const beforeChips = requests.length;
+  await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.type('textarea', 'Anker 737 充不进电');
+  await page.keyboard.press('Enter');
+  for (let i = 0; i < 60 && requests.length === beforeChips; i++) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 600));
+
+  const chipCount = await page.evaluate(() => document.querySelectorAll('.option-chip').length);
+  assert(chipCount === 2, `选项芯片数量应为 2，实际 ${chipCount}`);
+
+  await waitIdle();
+  const beforeClick = requests.length;
+  await page.click('.option-chip');
+  for (let i = 0; i < 60 && requests.length === beforeClick; i++) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 300));
+  assert(requests.length === beforeClick + 1, '点击芯片未发出聊天请求');
+  assert(requests[requests.length - 1].query === '自己',
+    `点击芯片应发送 value，实际 ${requests[requests.length - 1].query}`);
+
+  // 上限：注入 4 项只渲染 3 个
+  respondState = {
+    schema_version: 1, mock: true, product: 'Anker737', node: 'start',
+    options: [{ label: 'A', value: 'a' }, { label: 'B', value: 'b' }, { label: 'C', value: 'c' }, { label: 'D', value: 'd' }],
+    tasks: [{ kind: 'troubleshooting', status: 'waiting_user' }],
+  };
+  const beforeCap = requests.length;
+  await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.type('textarea', '再来一次');
+  await page.keyboard.press('Enter');
+  for (let i = 0; i < 60 && requests.length === beforeCap; i++) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 600));
+  const capCount = await page.evaluate(() => document.querySelectorAll('.option-chip').length);
+  assert(capCount === 3, `选项上限应为 3，实际 ${capCount}`);
+
+  // 脚本注入防御：label 里的标签被转义，不生成元素、不执行
+  respondState = {
+    schema_version: 1, mock: true, product: 'Anker737', node: 'start',
+    options: [{ label: '<img src=x onerror="window.__xss=1">', value: '自己' }], tasks: [],
+  };
+  const beforeXss = requests.length;
+  await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.type('textarea', '注入检查');
+  await page.keyboard.press('Enter');
+  for (let i = 0; i < 60 && requests.length === beforeXss; i++) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 500));
+  assert(await page.evaluate(() => document.querySelectorAll('.option-chip img').length === 0), '芯片内渲染出了注入的标签');
+  assert(!(await page.evaluate(() => window.__xss === 1)), '芯片文本未转义，注入脚本被执行');
+
+  // 空选项：不渲染容器
+  respondState = { schema_version: 1, mock: true, product: 'Anker737', node: 'start', options: [], tasks: [] };
+  const beforeEmpty = requests.length;
+  await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.type('textarea', '空选项检查');
+  await page.keyboard.press('Enter');
+  for (let i = 0; i < 60 && requests.length === beforeEmpty; i++) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 500));
+  assert(await page.evaluate(() => document.querySelector('.option-chips') === null), '空选项仍渲染了容器');
+
   // ===== B4：解释性文案清理与状态词 =====
   const cleanedText = await page.evaluate(() => document.body.innerText);
   for (const banned of [
