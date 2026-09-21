@@ -60,17 +60,15 @@ jobs:
         with:
           name: anker-aftersales-release
           path: release
-      - name: Prepare deployment and private proxy config
-        env:
-          DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
+      - name: Prepare credential-free deployment archive
         run: |
-          umask 077
           unzip -q release/anker-aftersales-release.zip -d unpacked
           mkdir -p workbench-deploy/services
           cp -R unpacked/anker-aftersales/frontend/dist workbench-deploy/dist
           cp deploy/nginx.conf workbench-deploy/nginx.conf
           cp -R mock_apis retrieval knowledge_base docker workbench-deploy/services/
-          python scripts/render_nginx.py
+          mkdir -p workbench-deploy/scripts
+          cp scripts/render_nginx.py workbench-deploy/scripts/
           tar -czf workbench-deploy.tar.gz -C workbench-deploy .
       - name: Copy release
         uses: appleboy/scp-action@v0.1.7
@@ -81,10 +79,13 @@ jobs:
           source: workbench-deploy.tar.gz,deploy/deploy.sh
           target: /tmp/
       - name: Deploy through existing server credentials
+        env:
+          DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           command_timeout: 15m
+          envs: DIFY_API_KEY
           script: sh /tmp/deploy/deploy.sh

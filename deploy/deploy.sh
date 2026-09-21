@@ -8,6 +8,8 @@ trap 'rm -rf "$STAGING"; rm -f /tmp/workbench-deploy.tar.gz' EXIT
 DEPLOY=$ROOT/workbench-deploy
 SERVICES=$ROOT/anker-demo-services
 tar -xzf /tmp/workbench-deploy.tar.gz -C "$STAGING"
+python3 "$STAGING/scripts/render_nginx.py" "$STAGING/nginx.conf"
+unset DIFY_API_KEY
 # Keep the previous front-end release available for rollback.
 if [ -d "$DEPLOY/dist" ]; then
   BACKUP=$(mktemp -d "$ROOT/workbench-backup.XXXXXX")

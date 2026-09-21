@@ -46,3 +46,11 @@
 - 首次推送被 GitHub 拒绝，原因是当前 OAuth 登录缺少修改 `.github/workflows/deploy-frontend.yml` 所需的 `workflow` scope。远端尚未收到实现提交，因此新部署尚未触发。
 - 已发起 `gh auth refresh -h github.com -s workflow`，等待账号持有人完成 GitHub 设备授权。完成授权后继续推送并检查 Actions。
 - Dify 应用 Secret 已配置成功，服务器原有三个 Secret 名称已确认存在；未读取或输出服务器凭据。
+
+## 2026-09-21 首次 Actions 验证与修复
+
+- GitHub 授权完成，`7dc8197` 已成功推送到 main。
+- Actions `35550069806` 的 validate 作业全部通过：Python 测试、前端构建、浏览器验收、ZIP、Compose 校验和 Docker 镜像构建。
+- deploy 在 Copy release 阶段失败：SCP action 容器无法读取 runner 中权限为 0600 的发布包；服务器部署脚本未执行。
+- 修复方式：发布包只含无密钥模板与代码，恢复可供上传容器读取的普通文件权限；Dify Secret 通过现有 SSH action 的环境变量传递，在服务器本地生成 0600 Nginx 配置。密钥不再进入发布包或 ZIP。
+- 新一轮部署结果随后补记。
