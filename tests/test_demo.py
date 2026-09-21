@@ -93,9 +93,9 @@ def test_negative_response_does_not_advance(client):
 
 def test_vision_threshold_and_conflict(client):
     for confidence,expected in [(.4,'start'),(.9,'cable')]:
-        a=turn(client,'Anker 737',has_image=True,extraction={'vision':{'product_model':'Anker737','phenomenon':'screen_dark','confidence':confidence}})
+        a=turn(client,'Anker 737',has_image=True,extraction={'vision':{'product_model':'Anker737','fault_phenomenon':'屏幕异常','confidence':confidence}})
         assert a['state']['node']==expected
-    a=turn(client,'Anker 737有显示',has_image=True,extraction={'vision':{'product_model':'Anker737','phenomenon':'screen_dark','confidence':.9}})
+    a=turn(client,'Anker 737有显示',has_image=True,extraction={'vision':{'product_model':'Anker737','fault_phenomenon':'屏幕异常','confidence':.9}})
     assert any(t['kind']=='vision' and t['status']=='waiting_user' for t in a['tasks'])
 
 def test_multi_intent_and_pending_policy(client):
