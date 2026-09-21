@@ -517,3 +517,21 @@ def test_openapi_spec_is_current():
     from mock_apis.app import app as current_app
     spec = json.loads((Path(__file__).resolve().parents[1] / 'mock_apis/openapi_spec.json').read_text())
     assert spec == current_app.openapi(), 'openapi_spec.json 已过期，需重新生成'
+
+
+def test_negated_promise_phrasing_is_not_treated_as_overreach():
+    """「不能承诺退款」是正确表述，不该被越界拦截丢掉——否则退款话术永远保持机械。"""
+    main = node_main('unpack')
+    body = json.dumps({'answer': '不会直接承诺退款、换新或补偿。', 'state': {'schema_version': 1, 'mock': True}})
+    for ok in ['需要您提供订单号，我们不能直接承诺退款或换新。',
+               '这项我没法承诺退款，得先核实凭证。',
+               '不构成退换或补偿承诺，最终以审核为准。']:
+        assert main(body, 200, '{}', ok)['answer'].startswith(ok), f'被误判为越界：{ok}'
+
+
+def test_affirmative_promise_is_still_blocked():
+    """真正的越界承诺仍要被拦下。"""
+    main = node_main('unpack')
+    body = json.dumps({'answer': '规则服务原文。', 'state': {'schema_version': 1, 'mock': True}})
+    for bad in ['我们承诺退款给您', '这边承诺换新', '已派单给专员', '客服将在 15 分钟内联系您', '保证给您免费换新']:
+        assert main(body, 200, '{}', bad)['answer'].startswith('规则服务原文。'), f'未被拦截：{bad}'

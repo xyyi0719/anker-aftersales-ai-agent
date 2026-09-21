@@ -30,9 +30,23 @@ import base64
 import re
 
 # 表达层的输出由模型生成，属于不可信输入：越界就回落到规则服务的原始文案。
+# 注意「承诺」要区分否定式：说「不能承诺退款」是正确行为，说「我们承诺退款」才是越界。
+# 判否定用单字（不/没/无/否），比逐个列词组稳，也不会随措辞变化而漏判。
 FORBIDDEN = re.compile(
-    r'已派单|已派给|客服(会|将)在|将在\s*\d|保证|承诺(退款|赔偿|换新)|一定(能|会)'
+    r'已派单|已派给|客服(会|将)在|将在\s*\d|保证|一定(能|会)'
     r'|schema_version|citations|transfer_summary|__EVIDENCE|vision|tasks')
+NEGATION_CHARS = '不没无否别'
+
+
+def oversteps(text):
+    if FORBIDDEN.search(text):
+        return True
+    for m in re.finditer(r'承诺\s*(退款|赔偿|换新)', text):
+        window = text[max(0, m.start() - 5):m.start()]
+        if not any(c in window for c in NEGATION_CHARS):
+            return True
+    return False
+
 
 def main(body: str, status_code: int, previous_state: str, composed: str) -> dict:
     try:
@@ -40,7 +54,7 @@ def main(body: str, status_code: int, previous_state: str, composed: str) -> dic
         if status_code != 200 or not isinstance(data.get('answer'), str) or not isinstance(data.get('state'), dict):
             raise ValueError('invalid service response')
         answer = data['answer']
-        if isinstance(composed, str) and composed.strip() and not FORBIDDEN.search(composed):
+        if isinstance(composed, str) and composed.strip() and not oversteps(composed):
             answer = composed.strip()
         evidence = base64.b64encode(json.dumps(data['state'], ensure_ascii=False).encode()).decode()
         return {'answer': answer + '\n__EVIDENCE_V1__' + evidence + '__EVIDENCE_END__', 'state': json.dumps(data['state'], ensure_ascii=False)}
