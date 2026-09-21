@@ -11,7 +11,7 @@ export function getMockSopResponse(query: string, files: Array<{ type: string; u
   if (q.includes('召回') || q.includes('爆炸') || q.includes('自燃')) {
     return {
       answer:
-        '【第三道·置信度锁防御触发】关于产品召回与安全疑问，系统检索官方知识库与合规公告未找到有效依据（置信度 < 0.5）。遵循 Anker 防幻觉“绝不瞎编”铁律，系统拒绝自由推测或虚构承诺，已诚实升级专员人工复核。',
+        '关于产品召回，我们手头没有可核验的最新依据，不能替您下结论。已转专员为您核实，请以专员的答复为准。',
       retrieverResources: [],
     };
   }
@@ -36,7 +36,7 @@ export function getMockSopResponse(query: string, files: Array<{ type: string; u
   if (q.includes('鼓包') || q.includes('烧焦') || q.includes('烧灼') || q.includes('开裂') || (hasImage && files[0]?.url?.includes('03_') || files[0]?.url?.includes('04_') || files[0]?.url?.includes('05_'))) {
     return {
       answer:
-        '🚨【安全警报 · 排障树紧急熔断】识别到设备存在电芯形变或接口烧蚀风险！为了您的用电安全，请立即断开电源并停止使用，切勿挤压设备！我们已将此会话升级为 P0 级人工专员工单，专员将在 15 分钟内介入为您办理极速换新。',
+        '识别到设备可能存在电芯形变或接口烧蚀的风险。为了用电安全，请立即断开电源并停止使用，切勿挤压或拆解设备。我们已升级专员工单为您优先处理。',
       retrieverResources: [
         {
           document_name: 'Anker 锂电池安全处理红线规范',
@@ -52,7 +52,7 @@ export function getMockSopResponse(query: string, files: Array<{ type: string; u
   if (q.includes('投诉') || q.includes('垃圾') || q.includes('气死') || q.includes('赔偿') || q.includes('维权')) {
     return {
       answer:
-        '非常抱歉给您带来如此糟糕的体验！我十分理解您的焦急与受挫心情。请您放心，我们绝不推诿责任。系统已为您开启【L3 优先服务通道】，并生成了包含已排查记录的结构化交接工单，主管专员将直接承接您的换新与补偿诉求！',
+        '非常抱歉给您带来这么差的体验，我理解您的焦急。我们不会推诿，已经把前面排查过的记录整理好交给主管专员，由他直接承接您的诉求。',
       retrieverResources: [
         {
           document_name: 'Anker 售后情绪三级响应 SOP',
@@ -68,7 +68,7 @@ export function getMockSopResponse(query: string, files: Array<{ type: string; u
   if (q.includes('倍思') || q.includes('baseus') || (hasImage && (files[0]?.url?.includes('11_') || files[0]?.url?.includes('12_')))) {
     return {
       answer:
-        '【服务边界说明】您好，图像与信息识别显示该设备为第三方品牌产品（非 Anker / Soundcore / eufy 生态）。本智能客服系统目前仅支持安克官方授权产品的售后排障与质保服务，建议您联系原购买渠道或对应品牌官方客服。感谢您的理解！',
+        '这张图看起来不是 Anker / Soundcore / eufy 的产品。我们目前只服务安克官方授权产品的售后排障与质保，建议您联系原购买渠道或对应品牌的客服，他们会更专业。感谢理解。',
       retrieverResources: [],
     };
   }

@@ -16,7 +16,6 @@ interface Props {
   onSend: (text: string, files?: Array<{ type: string; url: string }>) => void;
   onReset: () => void;
   error: string | null;
-  onOpenBenchmark?: () => void;
 }
 
 const DEMO_PRESETS: Array<{ label: string; query: string; icon?: string }> = [
@@ -32,7 +31,6 @@ export default function ChatWindow({
   onSend,
   onReset,
   error,
-  onOpenBenchmark,
 }: Props) {
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
@@ -109,15 +107,6 @@ export default function ChatWindow({
               {p.label}
             </button>
           ))}
-          {onOpenBenchmark && (
-            <button
-              className="preset-chip-btn benchmark-tag"
-              onClick={onOpenBenchmark}
-              title="载入12张官方视觉测试集图片"
-            >
-              📷 12张测试图集
-            </button>
-          )}
         </div>
       </div>
 
@@ -219,18 +208,6 @@ export default function ChatWindow({
               <IconCameraVision size={18} />
               <span>上传图片</span>
             </button>
-
-            {onOpenBenchmark && (
-              <button
-                className="action-btn icon-btn benchmark-btn"
-                disabled={isStreaming}
-                onClick={onOpenBenchmark}
-                title="选择 12 张黑客松测试集样本"
-              >
-                <IconSparkles size={16} color="#0084ff" />
-                <span>测试集样本</span>
-              </button>
-            )}
 
             <button
               className="action-btn icon-btn text-danger"

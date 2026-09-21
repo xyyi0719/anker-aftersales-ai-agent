@@ -21,7 +21,6 @@ interface Props {
   userQuery?: string;
   attachments?: Array<{ type: string; url: string }>;
   isStreaming?: boolean;
-  onOpenBenchmark?: () => void;
 }
 
 export default function SidePanel({
@@ -33,7 +32,6 @@ export default function SidePanel({
   userQuery,
   attachments = [],
   isStreaming,
-  onOpenBenchmark,
 }: Props) {
   const [activeTab, setActiveTab] = useState<'decision' | 'vision' | 'emotion' | 'retrieval'>('decision');
 
@@ -109,7 +107,6 @@ export default function SidePanel({
             vision={visionData}
             attachments={attachments}
             isStreaming={isStreaming}
-            onOpenBenchmark={onOpenBenchmark}
           />
         )}
 

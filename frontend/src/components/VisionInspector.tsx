@@ -22,10 +22,9 @@ interface Props {
   vision?: VisionTuple;
   attachments?: Array<{ type: string; url: string }>;
   isStreaming?: boolean;
-  onOpenBenchmark?: () => void;
 }
 
-export default function VisionInspector({ vision, attachments = [], isStreaming, onOpenBenchmark }: Props) {
+export default function VisionInspector({ vision, attachments = [], isStreaming }: Props) {
   const hasImage = attachments.length > 0;
   const isConfidenceHigh = (vision?.confidence ?? 0) >= CONFIDENCE_THRESHOLD;
   const isSafetyRisk = SAFETY_PHENOMENA.some(p => vision?.fault_phenomenon?.includes(p));
@@ -41,11 +40,6 @@ export default function VisionInspector({ vision, attachments = [], isStreaming,
           <IconCameraVision size={18} color="#0084ff" />
           <span>看图办事 · 结构化四元组提取</span>
         </div>
-        {onOpenBenchmark && (
-          <button className="vision-benchmark-btn" onClick={onOpenBenchmark} title="查看12张基准测试集">
-            <span>12张测试图集</span>
-          </button>
-        )}
       </div>
 
       {!hasImage && !vision ? (
@@ -54,11 +48,6 @@ export default function VisionInspector({ vision, attachments = [], isStreaming,
           <p className="vision-empty-text">
             用户上传故障图后，自动提取「型号/部位/现象/置信度」四元组，并驱动排障树跳级。
           </p>
-          {onOpenBenchmark && (
-            <button className="vision-empty-action" onClick={onOpenBenchmark}>
-              从 12 张基准测试集载入示例图 ↗
-            </button>
-          )}
         </div>
       ) : (
         <div className="vision-content-body">

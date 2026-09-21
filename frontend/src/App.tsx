@@ -4,16 +4,13 @@ import { useEventParser } from './hooks/useEventParser';
 import ChatWindow from './components/ChatWindow';
 import DefenseMatrix from './components/DefenseMatrix';
 import SidePanel from './components/SidePanel';
-import BenchmarkDrawer, { type BenchmarkCase } from './components/BenchmarkDrawer';
 import {
   IconAnkerLogo,
   IconShieldCheck,
-  IconCameraVision,
 } from './components/SvgIcons';
 
 export default function App() {
   const chat = useDifyChat();
-  const [showBenchmark, setShowBenchmark] = useState(false);
   const [collapsedSide, setCollapsedSide] = useState(false);
 
   // 获取最近的用户与助手消息
@@ -36,16 +33,6 @@ export default function App() {
     lastAssistantMsg?.retrieverResources?.length ||
     (retrievals.length > 0 ? retrievals[0].results.length : 0);
 
-  // 处理从 12 张基准测试集中一键载入案例
-  const handleSelectBenchmark = (testCase: BenchmarkCase, imageUrl: string) => {
-    setShowBenchmark(false);
-    // 注入选中的测试图片与预设提问
-    chat.send({
-      query: testCase.query,
-      files: [{ type: 'image', url: imageUrl }],
-    });
-  };
-
   return (
     <div className="anker-workbench-app">
       {/* 1. 顶层全局导航条 */}
@@ -61,15 +48,6 @@ export default function App() {
         </div>
 
         <div className="nav-actions-area">
-          <button
-            className="nav-btn benchmark-btn"
-            onClick={() => setShowBenchmark(true)}
-            title="查看并运行 12 张官方黑客松基准测试图片"
-          >
-            <IconCameraVision size={16} color="#0084ff" />
-            <span>12张基准测试集</span>
-          </button>
-
           <div className="nav-badge-pill">
             <IconShieldCheck size={14} color="#10b981" />
             <span>{chat.connected ? '服务在线' : chat.isStreaming ? '正在推理' : '准备就绪'}</span>
@@ -102,7 +80,6 @@ export default function App() {
             onSend={(query, files) => chat.send({ query, files })}
             onReset={chat.reset}
             error={chat.error}
-            onOpenBenchmark={() => setShowBenchmark(true)}
           />
         </section>
 
@@ -118,18 +95,10 @@ export default function App() {
               userQuery={initialQuery}
               attachments={initialAttachments}
               isStreaming={chat.isStreaming}
-              onOpenBenchmark={() => setShowBenchmark(true)}
             />
           </section>
         )}
       </main>
-
-      {/* 4. 12 张视觉基准测试集抽屉 */}
-      <BenchmarkDrawer
-        isOpen={showBenchmark}
-        onClose={() => setShowBenchmark(false)}
-        onSelectCase={handleSelectBenchmark}
-      />
     </div>
   );
 }
