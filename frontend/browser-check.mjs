@@ -14,6 +14,8 @@ page.on('pageerror', e => errors.push(e.message));
 page.on('requestfailed', r => console.log('Failed request', r.url(), r.failure()?.errorText));
 
 const requests = [];
+const actionRequests = [];
+let actionFail = false;
 let respondState = {
   schema_version: 1,
   mock: true,
@@ -40,6 +42,16 @@ page.on('request', async r => {
   }
   if (r.url().includes('/dify-api/files/upload')) {
     return r.respond({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'test-upload' }) });
+  }
+  if (r.url().includes('/mock-api/api/chat/action')) {
+    actionRequests.push(JSON.parse(r.postData()));
+    if (actionFail) {
+      return r.respond({ status: 500, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'boom' }) });
+    }
+    return r.respond({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ ok: true, ticket: { ticket_id: 'MOCK-TEST', status: 'transfer_requested', dispatched: false }, message: '已提交转派申请' })
+    });
   }
   return r.continue();
 });
@@ -268,6 +280,70 @@ try {
   for (let i = 0; i < 60 && requests.length === beforeEmpty; i++) await new Promise(r => setTimeout(r, 50));
   await new Promise(r => setTimeout(r, 500));
   assert(await page.evaluate(() => document.querySelector('.option-chips') === null), '空选项仍渲染了容器');
+
+  // ===== B3：工单流程与转派 =====
+  const stepDone = label => page.evaluate(l => {
+    const li = [...document.querySelectorAll('.ticket-step')].find(el => el.innerText.includes(l));
+    return li ? li.classList.contains('done') : null;
+  }, label);
+
+  respondState = {
+    schema_version: 1, mock: true, product: 'Anker737', node: 'cable',
+    ticket: { ticket_id: 'MOCK-TEST', status: 'mock_pending', dispatched: false },
+    tasks: [{ kind: 'handoff', status: 'mock_pending' }],
+  };
+  const beforeB3 = requests.length;
+  await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.type('textarea', '帮我建个工单');
+  await page.keyboard.press('Enter');
+  for (let i = 0; i < 60 && requests.length === beforeB3; i++) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 600));
+
+  assert(!(await page.evaluate(() => document.body.innerText)).includes('当前无工单'), '有工单时仍显示「当前无工单」');
+  assert((await stepDone('已定位故障')) === true, '已定位故障未点亮');
+  assert((await stepDone('已生成工单')) === true, '已生成工单未点亮');
+  assert((await stepDone('已提交转派申请')) === false, '未转派却点亮了已提交转派申请');
+  assert(await page.$('.ticket-action-btn'), '有工单且未转派时未出现「确认转派」按钮');
+
+  const beforeClickReq = requests.length;
+  const beforeAction = actionRequests.length;
+  await page.click('.ticket-action-btn');
+  for (let i = 0; i < 60 && actionRequests.length === beforeAction; i++) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 400));
+  assert(actionRequests.length === beforeAction + 1, '点击未调用动作接口');
+  assert(actionRequests[actionRequests.length - 1].action === 'transfer_to_agent', 'action 参数不正确');
+  assert(actionRequests[actionRequests.length - 1].ticket_id === 'MOCK-TEST', 'ticket_id 参数不正确');
+  assert(requests.length === beforeClickReq, '点转派不应产生 /dify-api/chat-messages 请求');
+  assert((await stepDone('已提交转派申请')) === true, '成功转派后节点未推进');
+  assert(!(await page.$('.ticket-action-btn')), '成功转派后按钮未消失');
+
+  const b3Text = await page.evaluate(() => document.body.innerText);
+  assert(!b3Text.includes('已转派'), '出现禁止措辞「已转派」');
+  assert(!b3Text.includes('专员已接单'), '出现禁止措辞「专员已接单」');
+  assert(!/\d+\s*分钟/.test(b3Text), '出现时长承诺');
+
+  // 失败不假装：接口 500 时不得显示已提交转派申请，且给出重试提示
+  actionFail = true;
+  respondState = {
+    schema_version: 1, mock: true, product: 'Anker737', node: 'cable',
+    ticket: { ticket_id: 'MOCK-FAIL', status: 'mock_pending', dispatched: false },
+    tasks: [{ kind: 'handoff', status: 'mock_pending' }],
+  };
+  const beforeFail = requests.length;
+  await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.type('textarea', '再来一个工单');
+  await page.keyboard.press('Enter');
+  for (let i = 0; i < 60 && requests.length === beforeFail; i++) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 600));
+
+  const beforeFailClick = actionRequests.length;
+  await page.click('.ticket-action-btn');
+  for (let i = 0; i < 60 && actionRequests.length === beforeFailClick; i++) await new Promise(r => setTimeout(r, 50));
+  await new Promise(r => setTimeout(r, 400));
+  assert((await stepDone('已提交转派申请')) === false, '接口失败却显示已提交转派申请');
+  assert(await page.$('.ticket-action-btn'), '失败后按钮未恢复可点');
+  assert((await page.evaluate(() => document.body.innerText)).includes('提交失败，请重试'), '失败未给出重试提示');
+  actionFail = false;
 
   // ===== B4：解释性文案清理与状态词 =====
   const cleanedText = await page.evaluate(() => document.body.innerText);

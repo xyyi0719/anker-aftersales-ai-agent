@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useDifyChat } from './hooks/useDifyChat';
 import { useEventParser } from './hooks/useEventParser';
 import { extractKeyInfo } from './utils/inference';
-import type { UserInsight } from './types';
+import type { TroubleshootingState, UserInsight } from './types';
 import ChatWindow from './components/ChatWindow';
 import DefenseMatrix from './components/DefenseMatrix';
 import SidePanel from './components/SidePanel';
@@ -14,6 +14,8 @@ import {
 export default function App() {
   const chat = useDifyChat();
   const [collapsedSide, setCollapsedSide] = useState(false);
+  // 转派结果（以动作接口返回为准，覆盖到本会话工单）
+  const [transferredTicket, setTransferredTicket] = useState<{ id: string; status: string } | null>(null);
 
   // 获取最近的用户与助手消息
   const lastUserMsg = [...chat.messages].reverse().find(m => m.role === 'user');
@@ -50,6 +52,12 @@ export default function App() {
 
   // B2 可点选项芯片：只取服务给的 options（空则不渲染）
   const assistantOptions = state.options || [];
+
+  // B3 转派后状态覆盖：只改 status，不伪造服务返回的其它字段
+  const panelState: TroubleshootingState =
+    transferredTicket && state.ticket?.ticket_id === transferredTicket.id
+      ? { ...state, ticket: { ...state.ticket, status: transferredTicket.status } }
+      : state;
 
   return (
     <div className="anker-workbench-app">
@@ -108,9 +116,11 @@ export default function App() {
           <section className="evidence-column-section" aria-label="处理依据">
             <SidePanel
               tasks={tasks}
-              state={state}
+              state={panelState}
               attachments={initialAttachments}
               isStreaming={chat.isStreaming}
+              conversationId={chat.conversationId || undefined}
+              onTransferred={t => setTransferredTicket({ id: t.ticket_id, status: t.status })}
             />
           </section>
         )}

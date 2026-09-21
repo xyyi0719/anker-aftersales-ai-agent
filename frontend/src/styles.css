@@ -2021,3 +2021,33 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* --------------------------------------------------------------------------
+   14. 工单转派动作 (B3) —— 未完成态措辞，失败可重试
+   -------------------------------------------------------------------------- */
+.ticket-action-btn {
+  margin-top: 12px;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--anker-blue);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.ticket-action-btn:hover:not(:disabled) {
+  background: #0a6fd8;
+}
+
+.ticket-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ticket-error {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--color-danger);
+}
