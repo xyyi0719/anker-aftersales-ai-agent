@@ -8,7 +8,7 @@ interface Props {
   onTransferred?: (ticket: { ticket_id: string; status: string; dispatched?: boolean }) => void;
 }
 
-// 措辞纪律：只用未完成态（「待专员接单」「已提交转派申请」），不写「已转派」「专员已接单」，不写时长承诺。
+// 措辞纪律：只用未完成态（「待专员接单」「已提交转派申请」）；不得写成已完成的派单，也不得承诺时长。
 export default function TicketFlow({ state, conversationId, onTransferred }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

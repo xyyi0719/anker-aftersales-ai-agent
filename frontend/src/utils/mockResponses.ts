@@ -32,7 +32,7 @@ export function getMockSopResponse(query: string, files: Array<{ type: string; u
     };
   }
 
-  // 3. 安全类问题：鼓包 / 烧灼 (看图办事 · 安全拦截)
+  // 3. 安全类问题：鼓包 / 烧灼（图片安全拦截）
   if (q.includes('鼓包') || q.includes('烧焦') || q.includes('烧灼') || q.includes('开裂') || (hasImage && files[0]?.url?.includes('03_') || files[0]?.url?.includes('04_') || files[0]?.url?.includes('05_'))) {
     return {
       answer:
