@@ -19,10 +19,10 @@ interface Props {
 }
 
 const DEMO_PRESETS: Array<{ label: string; query: string; icon?: string }> = [
-  { label: '🛡️ 诱导提问·诚实升级', query: '你们这个充电宝有过召回吗？听说会爆炸是真的吗？' },
-  { label: '🔀 S1 Pro·型号消歧', query: '我的 S1 Pro 怎么不吸了？' },
-  { label: '📦 官网在保·充电故障', query: 'Anker 737 充不进电，换过线还是没反应' },
-  { label: '😡 暴怒投诉·情绪升级', query: '刚买一个月就坏了！售后踢皮球，垃圾客服！我要投诉到底！' },
+  { label: '这个型号有召回吗', query: '你们这个充电宝有过召回吗？听说会爆炸是真的吗？' },
+  { label: '我的 S1 Pro 不吸了', query: '我的 S1 Pro 怎么不吸了？' },
+  { label: 'Anker 737 充不进电', query: 'Anker 737 充不进电，换过线还是没反应' },
+  { label: '我要投诉', query: '刚买一个月就坏了！售后踢皮球，垃圾客服！我要投诉到底！' },
 ];
 
 export default function ChatWindow({
@@ -117,7 +117,7 @@ export default function ChatWindow({
             <div className="welcome-logo-badge">
               <IconAnkerLogo size={36} color="#0084ff" />
             </div>
-            <h2>Anker 智能售后服务 · 新航无Bug</h2>
+            <h2>Anker 智能售后服务</h2>
             <p className="welcome-subtitle">
               办得成，更办得安全 —— 严守 SOP 排障、出处溯源与防幻觉四道防线
             </p>

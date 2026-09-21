@@ -110,7 +110,7 @@ export default function MessageBubble({ message, onConfirmProduct, isStreaming }
               <summary className="citation-summary-btn">
                 <div className="summary-left">
                   <IconSourceQuote size={14} color="#0084ff" />
-                  <span>出处锁 · 引用了 {citations.length} 条官方政策依据</span>
+                  <span>参考了 {citations.length} 条官方依据</span>
                 </div>
                 <span className="summary-tag">已通过元数据核验</span>
               </summary>

@@ -9,7 +9,6 @@ import {
   IconGitBranch,
   IconChartTrend,
   IconSourceQuote,
-  IconFsmProcess,
 } from './SvgIcons';
 
 interface Props {
@@ -41,15 +40,6 @@ export default function SidePanel({
 
   return (
     <aside className="audit-side-panel">
-      {/* 看板顶栏 */}
-      <div className="side-panel-top-bar">
-        <div className="panel-title-wrap">
-          <IconFsmProcess size={18} color="#0084ff" />
-          <span className="panel-main-title">L3 可解释性决策与安全审计看板</span>
-        </div>
-        <span className="panel-mode-badge">合规审计视界</span>
-      </div>
-
       {/* 看板多维标签导航 */}
       <div className="side-panel-tabs">
         <button
@@ -119,12 +109,6 @@ export default function SidePanel({
 
         {activeTab === 'retrieval' && (
           <div className="retrieval-tab-content">
-            <div className="retrieval-intro-box">
-              <IconSourceQuote size={16} color="#0084ff" />
-              <span>
-                <strong>出处锁机制：</strong>政策类回答强制依托向量/元数据检索，置信度 &lt; 0.7 触发诚实升级，绝不编造召回或虚构质保。
-              </span>
-            </div>
             <RetrievalLog retrievals={retrievals} />
           </div>
         )}

@@ -35,18 +35,11 @@ export default function VisionInspector({ vision, attachments = [], isStreaming 
 
   return (
     <div className="vision-inspector-card">
-      <div className="vision-card-header">
-        <div className="vision-header-title">
-          <IconCameraVision size={18} color="#0084ff" />
-          <span>看图办事 · 结构化四元组提取</span>
-        </div>
-      </div>
-
       {!hasImage && !vision ? (
         <div className="vision-empty-box">
           <IconCameraVision size={32} color="#64748b" />
           <p className="vision-empty-text">
-            用户上传故障图后，自动提取「型号/部位/现象/置信度」四元组，并驱动排障树跳级。
+            上传故障照片后可查看识别结果。
           </p>
         </div>
       ) : (

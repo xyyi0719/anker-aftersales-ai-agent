@@ -105,7 +105,7 @@ try {
   await ask('Anker 737 充不进电', undefined);
   let text = await panelText();
   assert(!text.includes('88%'), '无视觉数据时出现被写死的置信度 88%');
-  assert(text.includes('用户上传故障图后'), '无视觉数据时未显示空状态引导');
+  assert(text.includes('上传故障照片后'), '无视觉数据时未显示空状态引导');
 
   // 安全类现象：不受置信度门槛限制
   await ask('帮我看看', { product_model: 'unknown', fault_location: '电芯', fault_phenomenon: '鼓包', confidence: 0.3, is_anker_product: true, brand: 'unknown' });
@@ -129,6 +129,24 @@ try {
   text = await panelText();
   assert(text.includes('非 Anker 生态产品'), '非 Anker 未显示拒答横幅');
   assert(text.includes('baseus'), '未显示图上品牌依据');
+
+  // ===== B4：解释性文案清理与状态词 =====
+  const cleanedText = await page.evaluate(() => document.body.innerText);
+  for (const banned of [
+    '新航无Bug', 'L3 审计在线', '四道防线全时锁闭', '有限状态机决策',
+    '条款按边界切片', '门限 ≥ 0.8', '未知即一等公民', '只挂载合规API',
+    '退款/补偿权限隔离', 'L3 可解释性决策与安全审计看板', '合规审计视界',
+    '看图办事 · 结构化四元组提取', '出处锁机制',
+    '置信度达标 · 锁定条款出处安全作答', '置信度不足门限', '出处锁 · 引用了',
+    '诱导提问·诚实升级', '暴怒投诉·情绪升级', '🛡️', '🔀', '📦', '😡',
+  ]) {
+    assert(!cleanedText.includes(banned), `残留解释性文案：${banned}`);
+  }
+  assert(/第 \d 道已触发|全部正常/.test(cleanedText), '防线汇总未显示状态词');
+
+  // 权限锁：提出退款诉求后点亮
+  await ask('你直接给我退款', undefined);
+  assert((await page.evaluate(() => document.body.innerText)).includes('已阻断越权请求'), '退款诉求未点亮权限锁');
 
   assert.equal(errors.length, 0, errors.join('\n'));
 

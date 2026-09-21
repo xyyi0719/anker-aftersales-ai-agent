@@ -37,12 +37,12 @@ export default function RetrievalLog({ retrievals }: Props) {
               {r.answerable ? (
                 <div className="verdict-tag success">
                   <IconCheckCircle size={14} />
-                  <span>置信度达标 · 锁定条款出处安全作答</span>
+                  <span>已匹配到依据</span>
                 </div>
               ) : (
                 <div className="verdict-tag warning">
                   <IconAlertTriangle size={14} />
-                  <span>置信度不足门限 · 诚实升级专员（绝不瞎编）</span>
+                  <span>依据不足，已转专员核实</span>
                 </div>
               )}
             </div>

@@ -13,9 +13,11 @@ interface Props {
   state: TroubleshootingState;
   citationsCount: number;
   isStreaming?: boolean;
+  /** 用户是否提出退款/赔偿类越权诉求（第四道·权限锁的触发信号） */
+  privilegeRequested?: boolean;
 }
 
-export default function DefenseMatrix({ state, citationsCount, isStreaming }: Props) {
+export default function DefenseMatrix({ state, citationsCount, isStreaming, privilegeRequested = false }: Props) {
   const [pulseLock, setPulseLock] = useState<string | null>(null);
   const prevNode = useRef(state.currentNode);
   const prevCitations = useRef(citationsCount);
@@ -54,22 +56,27 @@ export default function DefenseMatrix({ state, citationsCount, isStreaming }: Pr
     (state.currentNode && state.currentNode.includes('诚实升级')) ||
     (state.action && state.action.includes('fallback'));
 
+  // 四道防线：未触发只显示状态词，触发时才给出原因
+  const flowTriggered = state.path.length > 0;
+  const sourceTriggered = citationsCount > 0;
+  const confidenceTriggered = Boolean(isAdversarialOrLowConf);
+  const triggeredCount = [flowTriggered, sourceTriggered, confidenceTriggered, privilegeRequested].filter(Boolean).length;
+
   return (
     <div className="defense-matrix-bar">
       <div className="defense-matrix-header">
         <div className="defense-title-group">
           <IconShieldCheck size={20} color="#10b981" />
           <span className="defense-header-title">幻觉四道防线实时监控</span>
-          <span className="defense-badge-live">L3 审计在线</span>
         </div>
         <div className="defense-meta-status">
           {isStreaming ? (
             <span className="defense-status-pulse streaming">
-              <span className="dot" /> 状态机运算中...
+              <span className="dot" /> 运算中...
             </span>
           ) : (
             <span className="defense-status-pulse active">
-              <span className="dot" /> 四道防线全时锁闭
+              <span className="dot" /> {triggeredCount > 0 ? `第 ${triggeredCount} 道已触发` : '全部正常'}
             </span>
           )}
         </div>
@@ -83,14 +90,14 @@ export default function DefenseMatrix({ state, citationsCount, isStreaming }: Pr
               <IconFsmProcess size={16} />
             </span>
             <span className="defense-lock-name">第一道 · 流程锁</span>
-            <span className="defense-status-pill success">FSM控权</span>
+            <span className="defense-status-pill success">{flowTriggered ? '已推进' : '正常'}</span>
           </div>
           <div className="defense-card-main">
             <span className="defense-main-value">
-              {state.currentNode ? state.currentNode : isStreaming ? '节点推演中' : '根节点就绪'}
+              {state.currentNode ? state.currentNode : isStreaming ? '推演中' : '就绪'}
             </span>
             <span className="defense-sub-desc">
-              {state.path.length > 0 ? `已固化推进 ${state.path.length} 步 · 杜绝自由跨步` : '有限状态机决策 · 模型无跨级权'}
+              {flowTriggered ? `已按流程推进 ${state.path.length} 步` : '正常'}
             </span>
           </div>
         </div>
@@ -103,40 +110,40 @@ export default function DefenseMatrix({ state, citationsCount, isStreaming }: Pr
             </span>
             <span className="defense-lock-name">第二道 · 出处锁</span>
             <span className="defense-status-pill info">
-              {citationsCount > 0 ? `引用 ${citationsCount} 条` : '政策库待查'}
+              {sourceTriggered ? `引用 ${citationsCount} 条` : '正常'}
             </span>
           </div>
           <div className="defense-card-main">
             <span className="defense-main-value">
-              {citationsCount > 0 ? '已锚定官方条款' : '切片元数据严校'}
+              {sourceTriggered ? '已引用' : '正常'}
             </span>
             <span className="defense-sub-desc">
-              条款按边界切片 · 支持逐字溯源核对
+              {sourceTriggered ? `已引用 ${citationsCount} 条` : '正常'}
             </span>
           </div>
         </div>
 
         {/* 3. 置信度锁 */}
-        <div className={`defense-card ${isAdversarialOrLowConf ? 'defense-card-warn' : ''} ${pulseLock === 'confidence' ? 'card-pulse' : ''}`}>
+        <div className={`defense-card ${confidenceTriggered ? 'defense-card-warn' : ''} ${pulseLock === 'confidence' ? 'card-pulse' : ''}`}>
           <div className="defense-card-top">
             <span className="defense-icon-badge confidence">
-              {isAdversarialOrLowConf ? (
+              {confidenceTriggered ? (
                 <IconAlertTriangle size={16} color="#f59e0b" />
               ) : (
                 <IconConfidenceGauge size={16} />
               )}
             </span>
             <span className="defense-lock-name">第三道 · 置信度锁</span>
-            <span className={`defense-status-pill ${isAdversarialOrLowConf ? 'warning' : 'success'}`}>
-              {isAdversarialOrLowConf ? '触发防御' : '门限 ≥ 0.8'}
+            <span className={`defense-status-pill ${confidenceTriggered ? 'warning' : 'success'}`}>
+              {confidenceTriggered ? '已升级' : '正常'}
             </span>
           </div>
           <div className="defense-card-main">
             <span className="defense-main-value">
-              {isAdversarialOrLowConf ? '触发诚实升级' : '置信度达标'}
+              {confidenceTriggered ? '已升级' : '正常'}
             </span>
             <span className="defense-sub-desc">
-              {isAdversarialOrLowConf ? '检索无据拒答转专员 · 绝不瞎编' : '未知即一等公民 · 阻断虚构回答'}
+              {confidenceTriggered ? '无可靠依据，已升级' : '正常'}
             </span>
           </div>
         </div>
@@ -148,14 +155,14 @@ export default function DefenseMatrix({ state, citationsCount, isStreaming }: Pr
               <IconPermissionGuard size={16} />
             </span>
             <span className="defense-lock-name">第四道 · 权限锁</span>
-            <span className="defense-status-pill neutral">显式授权</span>
+            <span className="defense-status-pill neutral">{privilegeRequested ? '已阻断' : '正常'}</span>
           </div>
           <div className="defense-card-main">
             <span className="defense-main-value">
-              {state.toolCalls.length > 0 ? `已调用 ${state.toolCalls.length} 次工具` : '只挂载合规API'}
+              {privilegeRequested ? '已阻断' : '正常'}
             </span>
             <span className="defense-sub-desc">
-              退款/补偿权限隔离 · 阻断越权承诺
+              {privilegeRequested ? '已阻断越权请求' : '正常'}
             </span>
           </div>
         </div>

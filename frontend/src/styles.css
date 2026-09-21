@@ -124,16 +124,6 @@ body {
   border-color: var(--border-active);
 }
 
-.nav-btn.benchmark-btn {
-  background: rgba(0, 132, 255, 0.1);
-  border-color: rgba(0, 132, 255, 0.35);
-  color: var(--anker-cyan);
-}
-
-.nav-btn.benchmark-btn:hover {
-  background: rgba(0, 132, 255, 0.2);
-}
-
 .nav-badge-pill {
   display: inline-flex;
   align-items: center;
@@ -323,7 +313,7 @@ body {
   overflow: hidden;
 }
 
-.audit-column-section {
+.evidence-column-section {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -382,11 +372,6 @@ body {
   background: var(--bg-card-hover);
   color: var(--text-primary);
   border-color: var(--border-active);
-}
-
-.preset-chip-btn.benchmark-tag {
-  color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.3);
 }
 
 .chat-messages-area {
@@ -875,11 +860,6 @@ body {
   color: var(--text-primary);
 }
 
-.action-btn.benchmark-btn {
-  color: var(--anker-cyan);
-  border-color: rgba(56, 189, 248, 0.3);
-}
-
 .action-btn.text-danger:hover {
   color: var(--color-danger);
   border-color: rgba(239, 68, 68, 0.3);
@@ -1040,16 +1020,6 @@ body {
   font-size: 13px;
   font-weight: 700;
   color: #ffffff;
-}
-
-.vision-benchmark-btn {
-  font-size: 10px;
-  padding: 3px 8px;
-  color: var(--anker-cyan);
-  background: rgba(56, 189, 248, 0.1);
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  border-radius: 4px;
-  cursor: pointer;
 }
 
 .vision-empty-box {
@@ -1620,9 +1590,8 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   9. 弹窗与抽屉 (BenchmarkDrawer & HandoffModal)
+   9. 弹窗与抽屉 (HandoffModal)
    -------------------------------------------------------------------------- */
-.benchmark-drawer-overlay,
 .handoff-modal-overlay {
   position: fixed;
   inset: 0;
@@ -1635,7 +1604,6 @@ body {
   padding: 20px;
 }
 
-.benchmark-drawer-panel,
 .handoff-modal-card {
   background: #0f172a;
   border: 1px solid var(--border-active);
@@ -1649,7 +1617,6 @@ body {
   overflow: hidden;
 }
 
-.benchmark-drawer-header,
 .handoff-modal-header {
   display: flex;
   align-items: center;
@@ -1658,151 +1625,27 @@ body {
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.benchmark-header-info,
 .handoff-modal-title {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.benchmark-header-info h3,
 .handoff-modal-title h3 {
   font-size: 15px;
   font-weight: 700;
 }
 
-.benchmark-header-info p,
 .handoff-modal-title p {
   font-size: 11px;
   color: var(--text-muted);
 }
 
-.benchmark-close-btn,
 .handoff-close-btn {
   font-size: 20px;
   color: var(--text-muted);
   background: none;
   border: none;
-  cursor: pointer;
-}
-
-.benchmark-filter-tabs {
-  display: flex;
-  gap: 8px;
-  padding: 10px 20px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.benchmark-tab {
-  padding: 4px 12px;
-  font-size: 11px;
-  color: var(--text-muted);
-  background: transparent;
-  border: 1px solid var(--border-subtle);
-  border-radius: 999px;
-  cursor: pointer;
-}
-
-.benchmark-tab.active {
-  background: var(--anker-blue);
-  color: #fff;
-  border-color: var(--anker-blue);
-}
-
-.benchmark-cards-grid {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-}
-
-.benchmark-card {
-  display: flex;
-  gap: 12px;
-  padding: 12px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.benchmark-card:hover {
-  border-color: var(--anker-cyan);
-  background: var(--bg-card-hover);
-  transform: translateY(-2px);
-}
-
-.benchmark-card.danger-edge {
-  border-color: rgba(239, 68, 68, 0.35);
-}
-
-.benchmark-thumb-wrapper {
-  position: relative;
-  width: 80px;
-  height: 80px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  flex-shrink: 0;
-}
-
-.benchmark-thumb {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.benchmark-category-tag {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  font-size: 9px;
-  padding: 1px 4px;
-  border-radius: 2px;
-  background: rgba(0, 0, 0, 0.8);
-}
-
-.benchmark-card-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.benchmark-card-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.benchmark-card-desc {
-  font-size: 10px;
-  color: var(--text-secondary);
-}
-
-.benchmark-expected-action {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 10px;
-  color: #38bdf8;
-}
-
-.benchmark-expected-action.safety { color: #f87171; }
-.benchmark-expected-action.boundary { color: #fbbf24; }
-
-.benchmark-use-btn {
-  margin-top: auto;
-  align-self: flex-start;
-  font-size: 10px;
-  padding: 3px 8px;
-  color: var(--anker-blue);
-  background: rgba(0, 132, 255, 0.1);
-  border: none;
-  border-radius: 3px;
   cursor: pointer;
 }
 
@@ -1933,7 +1776,7 @@ body {
   .workbench-workspace-main {
     grid-template-columns: 1fr;
   }
-  .audit-column-section {
+  .evidence-column-section {
     display: none;
   }
 }

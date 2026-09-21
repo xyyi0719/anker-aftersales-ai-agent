@@ -33,6 +33,11 @@ export default function App() {
     lastAssistantMsg?.retrieverResources?.length ||
     (retrievals.length > 0 ? retrievals[0].results.length : 0);
 
+  // 第四道·权限锁：用户提出退款/赔偿类越权诉求时点亮（规则服务不授予该类权益）
+  const privilegeRequested = chat.messages.some(
+    m => m.role === 'user' && /退款|退货|赔偿|补偿|退钱|退一赔三/.test(m.content || '')
+  );
+
   return (
     <div className="anker-workbench-app">
       {/* 1. 顶层全局导航条 */}
@@ -43,7 +48,6 @@ export default function App() {
           </div>
           <div className="brand-text-group">
             <span className="brand-title">Anker 智能售后 AI 工作台</span>
-            <span className="brand-sub">新航无Bug · 黑客松智能服务赛道 (L3 深化)</span>
           </div>
         </div>
 
@@ -56,7 +60,7 @@ export default function App() {
           <button
             className="nav-btn collapse-toggle-btn"
             onClick={() => setCollapsedSide(v => !v)}
-            title={collapsedSide ? '展开审计看板' : '收起审计看板'}
+            title={collapsedSide ? '展开' : '收起'}
           >
             {collapsedSide ? '展开看板 ◨' : '收起看板 ◫'}
           </button>
@@ -68,6 +72,7 @@ export default function App() {
         state={state}
         citationsCount={citationsCount}
         isStreaming={chat.isStreaming}
+        privilegeRequested={privilegeRequested}
       />
 
       {/* 3. 主工作区分割布局 */}
@@ -83,9 +88,9 @@ export default function App() {
           />
         </section>
 
-        {/* 右侧：L3 可解释性决策与安全审计看板 */}
+        {/* 右侧：处理依据 */}
         {!collapsedSide && (
-          <section className="audit-column-section" aria-label="决策审计看板">
+          <section className="evidence-column-section" aria-label="处理依据">
             <SidePanel
               routing={routing}
               tasks={tasks}
