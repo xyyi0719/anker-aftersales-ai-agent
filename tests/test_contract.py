@@ -1,4 +1,4 @@
-"""契约测试：三端接口契约的 Mock 侧断言。见 docs/03-contract.md。
+"""契约测试：三端接口契约的 Mock 侧断言。见 docs/V2/spec/00-契约冻结.md。
 
 这些用例锁定 contract A（extraction）与 contract B（state）的行为。
 违反契约时应当失败，而不是被兜底掩盖。

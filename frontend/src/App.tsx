@@ -3,17 +3,21 @@ import { useDifyChat } from './hooks/useDifyChat';
 import { useEventParser } from './hooks/useEventParser';
 import { extractKeyInfo } from './utils/inference';
 import type { TroubleshootingState, UserInsight } from './types';
+import type { BenchmarkCase } from './data/benchmarkCases';
 import ChatWindow from './components/ChatWindow';
 import DefenseMatrix from './components/DefenseMatrix';
 import SidePanel from './components/SidePanel';
+import BenchmarkDrawer from './components/BenchmarkDrawer';
 import {
   IconAnkerLogo,
   IconShieldCheck,
+  IconCameraVision,
 } from './components/SvgIcons';
 
 export default function App() {
   const chat = useDifyChat();
   const [collapsedSide, setCollapsedSide] = useState(false);
+  const [showBenchmark, setShowBenchmark] = useState(false);
   // 转派结果（以动作接口返回为准，覆盖到本会话工单）
   const [transferredTicket, setTransferredTicket] = useState<{ id: string; status: string } | null>(null);
 
@@ -36,6 +40,12 @@ export default function App() {
   const citationsCount =
     lastAssistantMsg?.retrieverResources?.length ||
     (retrievals.length > 0 ? retrievals[0].results.length : 0);
+
+  // 从视觉测试集装入一例：图片与提问一起发给服务，等于用户自己发了这张图
+  const handleSelectBenchmark = (testCase: BenchmarkCase, imageUrl: string) => {
+    setShowBenchmark(false);
+    chat.send({ query: testCase.query, files: [{ type: 'image', url: imageUrl }] });
+  };
 
   // 第四道·权限锁：用户提出退款/赔偿类越权诉求时点亮（规则服务不授予该类权益）
   const privilegeRequested = chat.messages.some(
@@ -73,6 +83,17 @@ export default function App() {
         </div>
 
         <div className="nav-actions-area">
+          <button
+            className="nav-btn benchmark-open-btn"
+            disabled={chat.isStreaming}
+            onClick={() => setShowBenchmark(true)}
+            title="查看视觉测试集用例"
+            aria-label="测试图集"
+          >
+            <IconCameraVision size={16} color="#0084ff" />
+            <span>测试图集</span>
+          </button>
+
           <div className="nav-badge-pill">
             <IconShieldCheck size={14} color="#10b981" />
             <span>{chat.connected ? '服务在线' : chat.isStreaming ? '正在推理' : '准备就绪'}</span>
@@ -125,6 +146,12 @@ export default function App() {
           </section>
         )}
       </main>
+
+      <BenchmarkDrawer
+        isOpen={showBenchmark}
+        onClose={() => setShowBenchmark(false)}
+        onSelectCase={handleSelectBenchmark}
+      />
     </div>
   );
 }

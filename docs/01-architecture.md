@@ -1,5 +1,9 @@
 # 架构图
 
+> **本文是设计期（块1–块5）的架构方案，不是现状说明。** 图里的检索方案、Dify 工具接法与
+> 前端接口形态在实现过程中都换过；与代码不一致的地方以代码为准，逐条差异见文末
+> 「设计期方案 → 现状对照」。契约字段以 [`docs/V2/spec/00-契约冻结.md`](V2/spec/00-契约冻结.md) 为准。
+
 ## 总览
 
 ```
@@ -120,3 +124,18 @@
 - 五字段：`{query, user, conversation_id, inputs, response_mode}`
 - 自定义参数放 `inputs`：`{order_id, product_model, emotion_level, ...}`
 - 流式事件：`agent_message` / `agent_thought` / `tool_call`
+
+---
+
+## 设计期方案 → 现状对照
+
+实现时为了去掉 embedding 依赖、并把「理解」与「判定」分开，上图中的几处做法已经换掉。以下每行都以代码为准。
+
+| 设计期方案（上图） | 现状 | 代码位置 |
+|---|---|---|
+| 检索服务 `FastAPI + FAISS`，混合检索 | **离线 BM25**，无 embedding、无 FAISS、无网络请求；自标 `confidence_kind: heuristic_not_probability` | `retrieval/lexical.py` |
+| Mock API × 3，注册为 Dify 三个自定义工具（`query_order` / `check_warranty` / `create_ticket`） | **单个 HTTP 节点** `POST /api/chat/turn`；订单、核保、政策、工单、转派都在这个入口后面，判定由规则负责。上文列出的 `/api/orders/{id}`、`/api/warranty/check`、`/api/tickets`、`/api/policy/retrieve`、`/api/chat/action` 仍在，但不由流程串联 | `scripts/build_dify.py:101`、`mock_apis/routes/*` |
+| Dify 多节点：意图分类 → 状态机 → 工具调用 → 转人工 | **八节点单链**：`start → extract → pack → service → compose → unpack → save → answer`；意图识别与排障状态机都在规则服务里，模型只做提取与表达 | `scripts/build_dify.py:74-123` |
+| 自定义参数放 `inputs` | 恒发 `inputs: {}`；会话状态走 `conversation_id` + Dify 会话变量 `session_state` | `frontend/src/hooks/useDifyChat.ts:43` |
+| 流式事件 `agent_message` / `agent_thought` / `tool_call` | `response_mode: 'blocking'`，整段返回；结构化依据另以 `__EVIDENCE_V1__<base64>` 标记附在 answer 尾部 | `frontend/src/hooks/useDifyChat.ts:43`、`frontend/src/utils/evidence.ts:34` |
+| 视觉「四元组 `{型号, 位置, 现象, 置信度}`」 | 契约 A 的 `vision` 实为**七个**字段：`brand` / `product_model` / `fault_location` / `fault_phenomenon` / `confidence` / `is_anker_product` / `evidence` | `chatflow/prompts/08-extract-vision.txt:13-21` |

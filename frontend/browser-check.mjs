@@ -427,9 +427,97 @@ try {
   await ask('你直接给我退款', undefined);
   assert((await page.evaluate(() => document.body.innerText)).includes('已阻断'), '退款诉求未点亮权限锁');
 
+  // ===== 视觉测试集弹窗：导航栏单入口，用例取自真源 =====
+  // 期望值直接读真源，不在检查脚本里另抄一份，否则三处各写一遍。
+  const BENCHMARK = JSON.parse(fs.readFileSync('../mock_apis/data/vision_benchmark.json', 'utf8'));
+  assert.equal(BENCHMARK.length, 12, '真源应恰好 12 条');
+
+  await page.setViewport({ width: 1440, height: 1000 });
+  await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.click('.benchmark-open-btn');
+  await waitFor(() => page.$('.benchmark-drawer-panel'));
+
+  const cardCount = await page.evaluate(() => document.querySelectorAll('.benchmark-card').length);
+  assert(cardCount === BENCHMARK.length, `弹窗应渲染 ${BENCHMARK.length} 个用例，实际 ${cardCount}`);
+
+  const tabLabels = await page.evaluate(() =>
+    [...document.querySelectorAll('.benchmark-tab')].map(b => b.innerText.trim()));
+  assert(tabLabels.join('/') === '全部/正常/故障-安全/故障/边界', `分类签不正确：${tabLabels.join('/')}`);
+
+  const cardTitles = await page.evaluate(() =>
+    [...document.querySelectorAll('.benchmark-card-title')].map(el => el.innerText.trim()));
+  assert(cardTitles[0] === BENCHMARK[0].title && cardTitles[2] === BENCHMARK[2].title,
+    `卡片标题与真源不一致：${cardTitles.slice(0, 3).join(' / ')}`);
+
+  // 缩略图是懒加载的：先把网格滚一遍逼它们进场，再等真正解码完
+  await page.evaluate(async () => {
+    const grid = document.querySelector('.benchmark-cards-grid');
+    const step = Math.max(1, grid.clientHeight - 40);
+    for (let y = 0; y <= grid.scrollHeight; y += step) {
+      grid.scrollTop = y;
+      await new Promise(r => setTimeout(r, 150));
+    }
+    grid.scrollTop = 0;
+  });
+
+  // 图片必须真的加载：静默失败会退化成一排空卡片，看不出是 404 还是本来没图
+  const brokenThumbs = [];
+  const allThumbsLoaded = async () => {
+    brokenThumbs.length = 0;
+    for (const t of await page.evaluate(() =>
+      [...document.querySelectorAll('.benchmark-thumb')].map(i => ({ src: i.getAttribute('src'), w: i.naturalWidth })))) {
+      if (!(t.w > 0)) brokenThumbs.push(t.src);
+    }
+    return brokenThumbs.length === 0;
+  };
+  await waitFor(allThumbsLoaded, 10000);
+  assert(brokenThumbs.length === 0, `这些缩略图没加载出来：${brokenThumbs.join(', ')}`);
+
+  const thumbCount = await page.evaluate(() => document.querySelectorAll('.benchmark-thumb').length);
+  assert(thumbCount === BENCHMARK.length, `应有 ${BENCHMARK.length} 张缩略图，实际 ${thumbCount}`);
+  assert(await page.evaluate(() => document.querySelectorAll('.benchmark-thumb-broken').length === 0),
+    '出现了「图片未加载」占位');
+
+  await page.screenshot({ path: '../docs/screenshots/benchmark-drawer.png' });
+
+  // 弹窗文案不得回到解释性/越界措辞
+  const drawerText = await page.evaluate(() => document.querySelector('.benchmark-drawer-panel').innerText);
+  for (const banned of ['官方', '真机', '基准测试集', '四元组', '已转派', '专员已接单', '分钟']) {
+    assert(!drawerText.includes(banned), `弹窗出现禁用措辞：${banned}`);
+  }
+
+  // 筛选：只留「故障-安全」时剩 2 张
+  await page.evaluate(() => [...document.querySelectorAll('.benchmark-tab')]
+    .find(b => b.innerText.trim() === '故障-安全').click());
+  await waitFor(() => page.evaluate(() => document.querySelectorAll('.benchmark-card').length === 2));
+  assert(await page.evaluate(() => document.querySelectorAll('.benchmark-card').length) === 2, '分类筛选未生效');
+  await page.evaluate(() => [...document.querySelectorAll('.benchmark-tab')]
+    .find(b => b.innerText.trim() === '全部').click());
+  await waitFor(() => page.evaluate(() => document.querySelectorAll('.benchmark-card').length === 12));
+
+  // Esc 可关闭
+  await page.keyboard.press('Escape');
+  await waitFor(() => page.evaluate(() => document.querySelector('.benchmark-drawer-panel') === null));
+  assert(await page.evaluate(() => document.querySelector('.benchmark-drawer-panel') === null), 'Esc 未关闭弹窗');
+
+  // 点选一例：装入该图与该提问，并关闭弹窗
+  const beforeSelect = requests.length;
+  await page.click('.benchmark-open-btn');
+  await waitFor(() => page.$('.benchmark-drawer-panel'));
+  await page.evaluate(() => document.querySelectorAll('.benchmark-card')[2].click());
+  await waitForRequests(beforeSelect + 1);
+  await sleep(300);
+
+  assert(requests.length === beforeSelect + 1, '点选用例未发出聊天请求');
+  const picked = requests[requests.length - 1];
+  assert(picked.query === BENCHMARK[2].query,
+    `装入的提问应与真源一致：期望 ${BENCHMARK[2].query}，实际 ${picked.query}`);
+  assert(Array.isArray(picked.files) && picked.files.length === 1, '装入用例应带一张图片');
+  assert(await page.evaluate(() => document.querySelector('.benchmark-drawer-panel') === null), '选用后弹窗未关闭');
+
   assert.equal(errors.length, 0, errors.join('\n'));
 
-  console.log('Browser checks passed: desktop/mobile, no overflow, request, evidence, reset, IME, contract-C vision, no JS errors.');
+  console.log('Browser checks passed: desktop/mobile, no overflow, request, evidence, reset, IME, contract-C vision, benchmark drawer, no JS errors.');
 } catch (e) {
   console.log('Page errors:', errors);
   console.log('Visible:', await page.evaluate(() => document.body.innerText));

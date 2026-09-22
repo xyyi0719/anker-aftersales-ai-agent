@@ -94,10 +94,11 @@
 2. 拒答比"答错"安全（落到人手里不会更差）
 3. 实现成本低：保修 API 检测到 S1 Pro 直接返回 candidates 数组
 
-**实现**：
-- `mock_apis/routes/warranty.py` 的 `PRODUCT_AMBIGUOUS` 错误码
-- `chatflow/prompts/01-intent-classifier.txt` 提示"歧义在下一节点处理"
-- Chatflow 节点 1.5：检测到 ambiguous → 触发消歧追问
+**实现**（2026-09-22 校订：原记的三个落点均未落地，下面是实际代码）：
+- `mock_apis/engine.py:129-136` 的 `awaiting_product` 状态 + `product` / `waiting_user` 任务
+- 追问要求用户回复「扫地机器人」或「吸奶器」，命中后转 `unsupported_product`（`engine.py:130-133`）
+- 消歧在规则服务里，不在 Dify 流程里；没有 `PRODUCT_AMBIGUOUS` 错误码，也没有 chatflow 节点 1.5
+- 已知缺口：该追问不返回 `options`，所以线上不会出现「快速模拟对话」气泡（`docs/V2/spec/README.md` 遗留问题第 2 条）
 
 ---
 
@@ -110,9 +111,10 @@
 3. 投诉风险（含 315/工商/起诉词）必须 P0 1 小时响应
 2. 情绪→SLA 的映射让客服 Agent 有"业务判断"而不只是对话
 
-**实现**：
-- `chatflow/prompts/05-emotion-3levels.txt`
-- `mock_apis/routes/tickets.py` 的 `sla_days` 按情绪等级区分
+**实现**（2026-09-22 校订：原记的 `sla_days` 不存在，下面是实际代码）：
+- 情绪档位由模型的 `extract` 节点产出（`chatflow/prompts/08-extract-vision.txt` 的 `emotion` 字段，取值 `L0`–`L3`）；模型没给时由关键词正则兜底（`mock_apis/engine.py:76-77`）
+- 升级边界：`emotion == 'L3'` 或连续两轮 L2（`angry_streak >= 2`）→ 生成模拟交接工单（`engine.py:123-125`）
+- **未实现「情绪 → SLA」**：工单表只有 `id / summary / status`，没有 `sla_days`，界面与接口都不承诺响应时长（`mock_apis/routes/tickets.py:25`）；界面措辞纪律要求只说未完成态（`frontend/src/components/TicketFlow.tsx:11`）
 
 ---
 

@@ -106,7 +106,7 @@
 | 2 | S1 Pro 消歧的 `product/waiting_user` 任务不返回 `options` | 线上该追问不会出现「快速模拟对话」气泡，仍需手打 | A |
 | 3 | `/mock-api` 代理未注入 `MOCK_API_KEY` | 若线上启用该 Key，转派按钮返回 401 → 只显示「提交失败，请重试」 | A（见 `B3-工单流程与转派.md`） |
 | 4 | `read_text()` 未指定 `encoding='utf-8'`（`domain.py`、`scripts/*.py`、`tests/*.py`） | 中文 Windows 上 `UnicodeDecodeError`，要 `PYTHONUTF8=1` 才能跑测试 | A |
-| 5 | 本地 `test_openapi_spec_is_current` 失败 | 本地 pydantic 2.13.5 / fastapi 0.141.1 高于仓库固定（2.11.4 / 0.115.12），运行时 openapi 多了 `ctx`/`input`；CI 固定版本可通过 | A |
-| 6 | `docs/03-contract.md`（v1 契约）已被 `docs/V2/spec/00-契约冻结.md` 取代 | 两份契约并存，改错那份就会变形 | 文档负责人 |
-| 7 | `docs/00-progress.md`、`docs/CHANGELOG.md` 仍是旧进度与旧口径 | 与当前实现、测试结果不符 | 文档负责人 |
+| 5 | 本地 `test_openapi_spec_is_current` 失败 | 本地 pydantic 2.13.5 / fastapi 0.141.1 高于仓库固定（2.11.4 / 0.115.12），运行时 openapi 多了 `ctx`/`input`；CI 固定版本可通过。**不要用本地版本重生成 `mock_apis/openapi_spec.json`** —— 该文件必须与固定的 2.11.4 对齐，用更高版本重生成会反过来让 CI 失败 | A（2026-09-22 补注） |
+| 6 | `docs/03-contract.md`（v1 契约）已被 `docs/V2/spec/00-契约冻结.md` 取代 | 两份契约并存，改错那份就会变形 | **已处理 2026-09-22**：`03-contract.md` 改为废止说明 + 差异对照表，指向冻结契约；`engine.py` 与 `test_contract.py` 的引用同步改指 |
+| 7 | `docs/00-progress.md`、`docs/CHANGELOG.md` 仍是旧进度与旧口径 | 与当前实现、测试结果不符 | **已处理 2026-09-22**：CHANGELOG 补记到当日；`00-progress.md` 只指向 CHANGELOG，无需另行维护 |
 | 8 | **Actions deploy 失败：服务器拉不到基础镜像** —— `load metadata for docker.io/library/python:3.11-slim` 返回 `text/html` | **已定位**：`/etc/docker/daemon.json` 的 `registry-mirrors` 首个为 `docker.1panelproxy.com`，实测 `/v2/` 返回 `302 text/html`（另 `dockerpull.com` 直接连不通）；Docker 逐个试，第一个就是 HTML → BuildKit 直接失败。`docker pull` 同样会被污染（`unexpected media type text/html`）。`nginx -t` 已通过，与本轮前端改动无关 | 服务器/运维（A） |

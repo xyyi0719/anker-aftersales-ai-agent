@@ -8,7 +8,7 @@ RECALL = re.compile(r'召回|recall|爆炸|安全公告', re.I)
 # 文字里的安全信号。注意「线头烧焦」是耗材问题，不触发整机安全熔断，见 ACCESSORY_HINT。
 SAFETY_TEXT = re.compile(r'鼓包|冒烟|起火|漏液|烧焦|焦味|异味|自燃|swollen|smoke|on fire', re.I)
 ACCESSORY_HINT = re.compile(r'线|接头|端子|cable', re.I)
-# 竞品品牌：文字兜底。图片侧由 is_anker_product 判定，见 docs/03-contract.md。
+# 竞品品牌：文字兜底。图片侧由 is_anker_product 判定，见 docs/V2/spec/00-契约冻结.md。
 COMPETITOR = re.compile(r'小米|华为|索尼|sony|bose|倍思|baseus|罗马仕|绿联|品胜|羽博', re.I)
 
 # 契约 A 的现象分组（中文枚举，与 chatflow/prompts/08-extract-vision.txt 一致）

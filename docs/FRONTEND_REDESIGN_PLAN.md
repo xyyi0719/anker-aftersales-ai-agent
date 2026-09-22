@@ -1,5 +1,11 @@
 # Anker 智能售后 AI 工作台 · 前端美化与决策看板重构规划
 
+> **本文已完成，是一份历史规划，不是现状说明。** 其中提到的若干组件此后被重写或删除
+> （`AuditTimeline.tsx`、`EmotionAuditor.tsx`、`EmotionChart.tsx`、`RetrievalLog.tsx`、
+> `HandoffTicketModal.tsx`、`TransferSummary.tsx`、`TaskList.tsx`、`ProductDisambigCard.tsx`），
+> 右侧看板也从 4 个 tab 改为三层。要看当前结构请读 `frontend/src/App.tsx` 与
+> `docs/V2/03-前端改造清单.md`；契约以 `docs/V2/spec/00-契约冻结.md` 为准。
+
 > **对齐方案**：《Anker首届黑客松挑战赛 · 新航无Bug 预赛材料 V0.3》  
 > **设计定位**：从单一聊天框升级为 **「Anker 智能售后 L3 决策与安全审计工作台」**，兼顾消费者真实办理体验与评委后台可解释性审计。  
 > **工程标准**：单文件 ≤ 500 行、模块物理隔离、门面聚合导出、全量采用纯矢量 SVG 图标、编译期 0 报错。
