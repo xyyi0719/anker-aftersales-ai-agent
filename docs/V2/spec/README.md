@@ -109,3 +109,4 @@
 | 5 | 本地 `test_openapi_spec_is_current` 失败 | 本地 pydantic 2.13.5 / fastapi 0.141.1 高于仓库固定（2.11.4 / 0.115.12），运行时 openapi 多了 `ctx`/`input`；CI 固定版本可通过 | A |
 | 6 | `docs/03-contract.md`（v1 契约）已被 `docs/V2/spec/00-契约冻结.md` 取代 | 两份契约并存，改错那份就会变形 | 文档负责人 |
 | 7 | `docs/00-progress.md`、`docs/CHANGELOG.md` 仍是旧进度与旧口径 | 与当前实现、测试结果不符 | 文档负责人 |
+| 8 | **Actions deploy 失败：服务器拉不到基础镜像** —— `load metadata for docker.io/library/python:3.11-slim` 返回 `text/html`（`encountered unknown type text/html`） | 镜像加速器/代理异常；`docker compose up -d --build` 报错，且 `deploy.sh` 在「拷贝前端 dist」之前就退出，**前端也没上线**。`nginx -t` 已通过，与本轮前端改动无关 | 服务器/运维（A） |
