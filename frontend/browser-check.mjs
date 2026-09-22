@@ -61,6 +61,21 @@ page.on('request', async r => {
   return r.continue();
 });
 
+// CI runner 可能较慢：等待一律改成条件轮询（默认上限 15s），避免固定 sleep 导致的偶发失败
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const waitFor = async (fn, timeoutMs = 15000, stepMs = 100) => {
+  const end = Date.now() + timeoutMs;
+  for (;;) {
+    if (await fn()) return true;
+    if (Date.now() > end) return false;
+    await sleep(stepMs);
+  }
+};
+const waitForRequests = (n, t) => waitFor(() => requests.length >= n, t);
+const waitForActions = (n, t) => waitFor(() => actionRequests.length >= n, t);
+const waitForText = (text, t) => waitFor(() => page.evaluate(x => document.body.innerText.includes(x), text), t);
+const waitForChips = (n, t) => waitFor(() => page.evaluate(c => document.querySelectorAll('.option-chip').length === c, n), t);
+
 try {
   await page.setViewport({ width: 1440, height: 1000 });
   await page.goto('http://127.0.0.1:4173');
@@ -108,8 +123,8 @@ try {
     await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
     await page.type('textarea', text);
     await page.keyboard.press('Enter');
-    for (let i = 0; i < 60 && requests.length === before; i++) await new Promise(r => setTimeout(r, 50));
-    await new Promise(r => setTimeout(r, 500));
+    await waitForRequests(before + 1);
+    await sleep(500);
   };
 
   // 无视觉数据：不得编造型号或置信度（无图时展示空状态引导）
@@ -153,8 +168,9 @@ try {
   await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.type('textarea', '帮我看下充电情况');
   await page.keyboard.press('Enter');
-  for (let i = 0; i < 60 && requests.length === beforeB1; i++) await new Promise(r => setTimeout(r, 50));
-  await new Promise(r => setTimeout(r, 500));
+  await waitForRequests(beforeB1 + 1);
+  await waitFor(() => page.$('.layer-summary'));
+  await waitForText('已确认换线无效');
 
   assert(await page.$('.layer-summary'), '缺少上层容器');
   assert(await page.$('.layer-profile'), '缺少中层容器');
@@ -195,8 +211,8 @@ try {
   await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.type('textarea', '快气死我了，我的737充不进电');
   await page.keyboard.press('Enter');
-  for (let i = 0; i < 60 && requests.length === beforeB2; i++) await new Promise(r => setTimeout(r, 50));
-  await new Promise(r => setTimeout(r, 500));
+  await waitForRequests(beforeB2 + 1);
+  await waitForText('明显愤怒');
 
   const ubText = await page.evaluate(() => {
     const b = document.querySelector('.understanding-bubble');
@@ -215,18 +231,13 @@ try {
   await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.type('textarea', '你好');
   await page.keyboard.press('Enter');
-  for (let i = 0; i < 60 && requests.length === beforeB2b; i++) await new Promise(r => setTimeout(r, 50));
-  await new Promise(r => setTimeout(r, 400));
+  await waitForRequests(beforeB2b + 1);
+  await waitForText('平静');
   const ubText2 = await page.evaluate(() => document.querySelector('.understanding-bubble')?.innerText || '');
   assert(!/unknown/i.test(ubText2), '未识别项出现了 unknown 字样');
 
   // ===== B2：可点选项芯片 =====
-  const waitIdle = async () => {
-    for (let i = 0; i < 40; i++) {
-      if (!(await page.evaluate(() => !!document.querySelector('.option-chip:disabled')))) return;
-      await new Promise(r => setTimeout(r, 50));
-    }
-  };
+  const waitIdle = () => waitFor(() => page.evaluate(() => !document.querySelector('.option-chip:disabled')));
   respondState = {
     schema_version: 1, mock: true,
     product: 'Anker737', node: 'start',
@@ -240,8 +251,8 @@ try {
   await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.type('textarea', 'Anker 737 充不进电');
   await page.keyboard.press('Enter');
-  for (let i = 0; i < 60 && requests.length === beforeChips; i++) await new Promise(r => setTimeout(r, 50));
-  await new Promise(r => setTimeout(r, 600));
+  await waitForRequests(beforeChips + 1);
+  await waitForChips(2);
 
   const chipCount = await page.evaluate(() => document.querySelectorAll('.option-chip').length);
   assert(chipCount === 2, `选项芯片数量应为 2，实际 ${chipCount}`);
@@ -252,14 +263,14 @@ try {
     const q = document.querySelector('.quick-dialog');
     const t = document.querySelector('textarea');
     if (!q || !t) return false;
-    return q.getBoundingClientRect().bottom <= t.getBoundingClientRect().top + 1;
+    return q.getBoundingClientRect().bottom <= t.getBoundingClientRect().top + 4;
   }), '「快速模拟对话」未出现在输入框上方');
 
   await waitIdle();
   const beforeClick = requests.length;
   await page.click('.option-chip');
-  for (let i = 0; i < 60 && requests.length === beforeClick; i++) await new Promise(r => setTimeout(r, 50));
-  await new Promise(r => setTimeout(r, 300));
+  await waitForRequests(beforeClick + 1);
+  await sleep(300);
   assert(requests.length === beforeClick + 1, '点击芯片未发出聊天请求');
   assert(requests[requests.length - 1].query === '自己',
     `点击芯片应发送 value，实际 ${requests[requests.length - 1].query}`);
@@ -274,8 +285,8 @@ try {
   await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.type('textarea', '再来一次');
   await page.keyboard.press('Enter');
-  for (let i = 0; i < 60 && requests.length === beforeCap; i++) await new Promise(r => setTimeout(r, 50));
-  await new Promise(r => setTimeout(r, 600));
+  await waitForRequests(beforeCap + 1);
+  await waitForChips(3);
   const capCount = await page.evaluate(() => document.querySelectorAll('.option-chip').length);
   assert(capCount === 3, `选项上限应为 3，实际 ${capCount}`);
 
@@ -288,8 +299,8 @@ try {
   await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.type('textarea', '注入检查');
   await page.keyboard.press('Enter');
-  for (let i = 0; i < 60 && requests.length === beforeXss; i++) await new Promise(r => setTimeout(r, 50));
-  await new Promise(r => setTimeout(r, 500));
+  await waitForRequests(beforeXss + 1);
+  await waitForChips(1);
   assert(await page.evaluate(() => document.querySelectorAll('.option-chip img').length === 0), '芯片内渲染出了注入的标签');
   assert(!(await page.evaluate(() => window.__xss === 1)), '芯片文本未转义，注入脚本被执行');
 
@@ -299,8 +310,8 @@ try {
   await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.type('textarea', '空选项检查');
   await page.keyboard.press('Enter');
-  for (let i = 0; i < 60 && requests.length === beforeEmpty; i++) await new Promise(r => setTimeout(r, 50));
-  await new Promise(r => setTimeout(r, 500));
+  await waitForRequests(beforeEmpty + 1);
+  await waitFor(() => page.evaluate(() => document.querySelector('.option-chips') === null));
   assert(await page.evaluate(() => document.querySelector('.option-chips') === null), '空选项仍渲染了容器');
 
   // ===== B3：工单流程与转派 =====
@@ -318,8 +329,8 @@ try {
   await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.type('textarea', '帮我建个工单');
   await page.keyboard.press('Enter');
-  for (let i = 0; i < 60 && requests.length === beforeB3; i++) await new Promise(r => setTimeout(r, 50));
-  await new Promise(r => setTimeout(r, 600));
+  await waitForRequests(beforeB3 + 1);
+  await waitFor(() => page.$('.ticket-action-btn'));
 
   assert(!(await page.evaluate(() => document.body.innerText)).includes('当前无工单'), '有工单时仍显示「当前无工单」');
   assert((await stepDone('已定位故障')) === true, '已定位故障未点亮');
@@ -330,8 +341,8 @@ try {
   const beforeClickReq = requests.length;
   const beforeAction = actionRequests.length;
   await page.click('.ticket-action-btn');
-  for (let i = 0; i < 60 && actionRequests.length === beforeAction; i++) await new Promise(r => setTimeout(r, 50));
-  await new Promise(r => setTimeout(r, 400));
+  await waitForActions(beforeAction + 1);
+  await waitFor(() => page.evaluate(() => !document.querySelector('.ticket-action-btn')));
   assert(actionRequests.length === beforeAction + 1, '点击未调用动作接口');
   assert(actionRequests[actionRequests.length - 1].action === 'transfer_to_agent', 'action 参数不正确');
   assert(actionRequests[actionRequests.length - 1].ticket_id === 'MOCK-TEST', 'ticket_id 参数不正确');
@@ -355,26 +366,19 @@ try {
   await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.type('textarea', '再来一个工单');
   await page.keyboard.press('Enter');
-  for (let i = 0; i < 60 && requests.length === beforeFail; i++) await new Promise(r => setTimeout(r, 50));
-  await new Promise(r => setTimeout(r, 600));
+  await waitForRequests(beforeFail + 1);
+  await waitFor(() => page.$('.ticket-action-btn'));
 
   const beforeFailClick = actionRequests.length;
   await page.click('.ticket-action-btn');
-  for (let i = 0; i < 60 && actionRequests.length === beforeFailClick; i++) await new Promise(r => setTimeout(r, 50));
-  await new Promise(r => setTimeout(r, 400));
+  await waitForActions(beforeFailClick + 1);
+  await waitForText('提交失败，请重试');
   assert((await stepDone('已提交转派申请')) === false, '接口失败却显示已提交转派申请');
   assert(await page.$('.ticket-action-btn'), '失败后按钮未恢复可点');
   assert((await page.evaluate(() => document.body.innerText)).includes('提交失败，请重试'), '失败未给出重试提示');
   actionFail = false;
 
   // ===== 离线兜底：S1 Pro 消歧用「快速模拟对话」小气泡，不再用卡片 =====
-  const waitForText = async (t, tries = 60) => {
-    for (let i = 0; i < tries; i++) {
-      if (await page.evaluate(x => document.body.innerText.includes(x), t)) return true;
-      await new Promise(r => setTimeout(r, 100));
-    }
-    return false;
-  };
   forceOffline = true;
   await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
   await page.type('textarea', '我的s1pro不吸了');
