@@ -9,7 +9,7 @@
 - `mock_apis/`：原订单数据 + 3 个易于演示的订单；统一核保、政策路由、SQLite 模拟工单、对话规则接口。
 - `retrieval/lexical.py`：自动加载 17 条本地 FAQ 的离线 BM25 检索，中文二元组与英文词切分，结合明确口语匹配；没有 embedding 网络请求。
 - `knowledge_base/`：可跟随 Git 部署的 FAQ/政策/口语素材快照及可追溯来源。不是实时官方政策。
-- `frontend/`：聊天优先，按需展开处理依据；不再编造视觉置信度或显示猜测的办理结果。
+- `frontend/`：聊天优先；右侧三层看板（会话摘要与诉求 / 用户档案与产品 / 工单流程）常驻；输入框上方给「快速模拟对话」小气泡，点一下即替用户回复；不再编造视觉置信度或显示猜测的办理结果。
 - `chatflow/anker-aftersales-chatflow.yml`：主流程；`anker-offline-debug.yml` 为无模型文字联调版本。
 - `docs/reviews/参赛方案审核.md`：按官方模板审核主张与实现证据；`docs/CHANGELOG.md` 记录全部变更与验证边界。
 

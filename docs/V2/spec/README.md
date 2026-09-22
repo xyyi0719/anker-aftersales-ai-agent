@@ -93,3 +93,19 @@
 | 目录越界纪律 + 交叉审核 | 本节 §1 + `C-合并审核.md` | 谁都不改对方那端 |
 
 第 2 条是核心：**把纪律变成会失败的检查**，而不是靠人记得。
+
+---
+
+## 7. 本轮前端提交后的遗留问题（待确认 / 待 A 处理）
+
+> 由 B 组在实现本次前端改造时发现并记录，均在代码里保留了降级行为，不阻塞合并。
+
+| # | 问题 | 影响 | 归口 |
+|---|---|---|---|
+| 1 | `state.intents` / `state.user` 未产出（`domain.user_profile()` 已实现但无路由调用） | 中层「用户档案」显示「未识别」；用户气泡的「理解为」缺意图 | A（已在 `00-契约冻结.md` 变更记录登记为提议） |
+| 2 | S1 Pro 消歧的 `product/waiting_user` 任务不返回 `options` | 线上该追问不会出现「快速模拟对话」气泡，仍需手打 | A |
+| 3 | `/mock-api` 代理未注入 `MOCK_API_KEY` | 若线上启用该 Key，转派按钮返回 401 → 只显示「提交失败，请重试」 | A（见 `B3-工单流程与转派.md`） |
+| 4 | `read_text()` 未指定 `encoding='utf-8'`（`domain.py`、`scripts/*.py`、`tests/*.py`） | 中文 Windows 上 `UnicodeDecodeError`，要 `PYTHONUTF8=1` 才能跑测试 | A |
+| 5 | 本地 `test_openapi_spec_is_current` 失败 | 本地 pydantic 2.13.5 / fastapi 0.141.1 高于仓库固定（2.11.4 / 0.115.12），运行时 openapi 多了 `ctx`/`input`；CI 固定版本可通过 | A |
+| 6 | `docs/03-contract.md`（v1 契约）已被 `docs/V2/spec/00-契约冻结.md` 取代 | 两份契约并存，改错那份就会变形 | 文档负责人 |
+| 7 | `docs/00-progress.md`、`docs/CHANGELOG.md` 仍是旧进度与旧口径 | 与当前实现、测试结果不符 | 文档负责人 |
