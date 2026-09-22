@@ -212,18 +212,22 @@ body {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
-  transition: all 0.3s ease;
+  transition: transform 0.28s ease, box-shadow 0.28s ease, border-color 0.28s ease, background 0.28s ease;
 }
 
+/* 走到这一关：卡片微亮 + 稍微上抬 */
+.defense-card.is-active {
+  transform: translateY(-4px);
+  border-color: var(--accent, var(--border-active));
+  background: var(--accent-soft, var(--bg-card));
+  box-shadow: 0 10px 22px -14px var(--accent, var(--anker-blue)),
+              0 0 0 1px var(--accent, var(--anker-blue)) inset;
+}
+
+/* 刚触发的一次性脉冲：只补光，不抢位移 */
 .defense-card.card-pulse {
-  border-color: var(--anker-cyan);
-  box-shadow: 0 0 14px var(--anker-blue-glow);
-  transform: translateY(-1px);
-}
-
-.defense-card.defense-card-warn {
-  border-color: rgba(245, 158, 11, 0.4);
-  background: rgba(245, 158, 11, 0.05);
+  box-shadow: 0 0 16px var(--accent, var(--anker-blue-glow)),
+              0 0 0 1px var(--accent, var(--anker-blue)) inset;
 }
 
 .defense-card-top {
@@ -276,14 +280,6 @@ body {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.defense-sub-desc {
-  font-size: 10px;
-  color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -724,6 +720,12 @@ body {
 .disambig-card-btn.selected {
   border-color: var(--color-success);
   background: rgba(16, 185, 129, 0.08);
+}
+
+/* 历史消息上的消歧卡片：不可再点，避免重复发送 */
+.disambig-card-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .disambig-card-top {
@@ -2020,6 +2022,41 @@ body {
 .option-chip:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------------
+   15. 输入框上方的「快速模拟对话」—— 替用户说出下一句话
+   -------------------------------------------------------------------------- */
+.quick-dialog {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px;
+  margin-bottom: 6px;
+  background: rgba(0, 132, 255, 0.06);
+  border: 1px solid rgba(0, 132, 255, 0.18);
+  border-radius: var(--radius-sm);
+}
+
+.quick-dialog-label {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.quick-dialog .option-chips {
+  margin-top: 0;
+  gap: 6px;
+}
+
+/* 气泡形态：更像「替用户说下一句话」；整体收小 */
+.quick-dialog .option-chip {
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 12px 12px 12px 3px;
+  background: rgba(56, 189, 248, 0.12);
 }
 
 /* --------------------------------------------------------------------------

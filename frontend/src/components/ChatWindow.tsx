@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import type { ChatMessage, OptionChip, UserInsight } from '../types';
 import MessageBubble from './MessageBubble';
+import OptionChips from './OptionChips';
 import {
   IconSend,
   IconTrash,
@@ -39,7 +40,6 @@ export default function ChatWindow({
   assistantOptions,
 }: Props) {
   const lastUserId = [...messages].reverse().find(m => m.role === 'user')?.id;
-  const lastAssistantId = [...messages].reverse().find(m => m.role === 'assistant')?.id;
   const [input, setInput] = useState('');
   const [images, setImages] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -135,11 +135,8 @@ export default function ChatWindow({
             <MessageBubble
               key={m.id}
               message={m}
-              onConfirmProduct={(_id, name) => onSend(`我指的是 ${name}`)}
               isStreaming={isStreaming}
               insight={m.role === 'user' && m.id === lastUserId ? userInsight : undefined}
-              options={m.role === 'assistant' && m.id === lastAssistantId ? assistantOptions : undefined}
-              onOptionSelect={onSend}
             />
           ))
         )}
@@ -154,6 +151,14 @@ export default function ChatWindow({
 
       {/* 底部输入交互区 */}
       <div className="chat-composer-panel">
+        {/* 快速模拟对话：本轮追问选项，点一下就替用户说出下一句话 */}
+        {!isStreaming && assistantOptions && assistantOptions.length > 0 && (
+          <div className="quick-dialog" aria-label="快速模拟对话">
+            <span className="quick-dialog-label">快速模拟对话</span>
+            <OptionChips options={assistantOptions} onSelect={onSend} />
+          </div>
+        )}
+
         {images.length > 0 && (
           <div className="composer-previews-bar">
             {images.map((src, i) => (

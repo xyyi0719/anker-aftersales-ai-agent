@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 import type { TroubleshootingState } from '../types';
 import {
   IconFsmProcess,
@@ -15,6 +16,20 @@ interface Props {
   isStreaming?: boolean;
   /** 用户是否提出退款/赔偿类越权诉求（第四道·权限锁的触发信号） */
   privilegeRequested?: boolean;
+}
+
+// 每道防线的强调色：走到这一关时卡片微亮 + 上抬
+const ACCENT: Record<string, { color: string; soft: string }> = {
+  process: { color: '#8b5cf6', soft: 'rgba(139, 92, 246, 0.10)' },
+  source: { color: '#0084ff', soft: 'rgba(0, 132, 255, 0.10)' },
+  confidence: { color: '#f59e0b', soft: 'rgba(245, 158, 11, 0.10)' },
+  permission: { color: '#38bdf8', soft: 'rgba(56, 189, 248, 0.10)' },
+};
+
+function accentStyle(key: string): CSSProperties {
+  const a = ACCENT[key];
+  const vars: Record<string, string> = { '--accent': a.color, '--accent-soft': a.soft };
+  return vars as unknown as CSSProperties;
 }
 
 export default function DefenseMatrix({ state, citationsCount, isStreaming, privilegeRequested = false }: Props) {
@@ -56,7 +71,7 @@ export default function DefenseMatrix({ state, citationsCount, isStreaming, priv
     (state.currentNode && state.currentNode.includes('诚实升级')) ||
     (state.action && state.action.includes('fallback'));
 
-  // 四道防线：未触发只显示状态词，触发时才给出原因
+  // 四道防线：走到哪一关，哪一关的卡片微亮并上抬
   const flowTriggered = state.path.length > 0;
   const sourceTriggered = citationsCount > 0;
   const confidenceTriggered = Boolean(isAdversarialOrLowConf);
@@ -84,7 +99,10 @@ export default function DefenseMatrix({ state, citationsCount, isStreaming, priv
 
       <div className="defense-cards-grid">
         {/* 1. 流程锁 */}
-        <div className={`defense-card ${pulseLock === 'process' ? 'card-pulse' : ''}`}>
+        <div
+          className={`defense-card ${flowTriggered ? 'is-active' : ''} ${pulseLock === 'process' ? 'card-pulse' : ''}`}
+          style={accentStyle('process')}
+        >
           <div className="defense-card-top">
             <span className="defense-icon-badge process">
               <IconFsmProcess size={16} />
@@ -96,14 +114,14 @@ export default function DefenseMatrix({ state, citationsCount, isStreaming, priv
             <span className="defense-main-value">
               {state.currentNode ? state.currentNode : isStreaming ? '推演中' : '就绪'}
             </span>
-            <span className="defense-sub-desc">
-              {flowTriggered ? `已按流程推进 ${state.path.length} 步` : '正常'}
-            </span>
           </div>
         </div>
 
         {/* 2. 出处锁 */}
-        <div className={`defense-card ${pulseLock === 'source' ? 'card-pulse' : ''}`}>
+        <div
+          className={`defense-card ${sourceTriggered ? 'is-active' : ''} ${pulseLock === 'source' ? 'card-pulse' : ''}`}
+          style={accentStyle('source')}
+        >
           <div className="defense-card-top">
             <span className="defense-icon-badge source">
               <IconSourceQuote size={16} />
@@ -114,17 +132,15 @@ export default function DefenseMatrix({ state, citationsCount, isStreaming, priv
             </span>
           </div>
           <div className="defense-card-main">
-            <span className="defense-main-value">
-              {sourceTriggered ? '已引用' : '正常'}
-            </span>
-            <span className="defense-sub-desc">
-              {sourceTriggered ? `已引用 ${citationsCount} 条` : '正常'}
-            </span>
+            <span className="defense-main-value">{sourceTriggered ? '已引用' : '正常'}</span>
           </div>
         </div>
 
         {/* 3. 置信度锁 */}
-        <div className={`defense-card ${confidenceTriggered ? 'defense-card-warn' : ''} ${pulseLock === 'confidence' ? 'card-pulse' : ''}`}>
+        <div
+          className={`defense-card ${confidenceTriggered ? 'is-active' : ''} ${pulseLock === 'confidence' ? 'card-pulse' : ''}`}
+          style={accentStyle('confidence')}
+        >
           <div className="defense-card-top">
             <span className="defense-icon-badge confidence">
               {confidenceTriggered ? (
@@ -139,17 +155,15 @@ export default function DefenseMatrix({ state, citationsCount, isStreaming, priv
             </span>
           </div>
           <div className="defense-card-main">
-            <span className="defense-main-value">
-              {confidenceTriggered ? '已升级' : '正常'}
-            </span>
-            <span className="defense-sub-desc">
-              {confidenceTriggered ? '无可靠依据，已升级' : '正常'}
-            </span>
+            <span className="defense-main-value">{confidenceTriggered ? '已升级' : '正常'}</span>
           </div>
         </div>
 
         {/* 4. 权限锁 */}
-        <div className="defense-card">
+        <div
+          className={`defense-card ${privilegeRequested ? 'is-active' : ''}`}
+          style={accentStyle('permission')}
+        >
           <div className="defense-card-top">
             <span className="defense-icon-badge permission">
               <IconPermissionGuard size={16} />
@@ -158,12 +172,7 @@ export default function DefenseMatrix({ state, citationsCount, isStreaming, priv
             <span className="defense-status-pill neutral">{privilegeRequested ? '已阻断' : '正常'}</span>
           </div>
           <div className="defense-card-main">
-            <span className="defense-main-value">
-              {privilegeRequested ? '已阻断' : '正常'}
-            </span>
-            <span className="defense-sub-desc">
-              {privilegeRequested ? '已阻断越权请求' : '正常'}
-            </span>
+            <span className="defense-main-value">{privilegeRequested ? '已阻断' : '正常'}</span>
           </div>
         </div>
       </div>

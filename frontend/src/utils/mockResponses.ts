@@ -1,5 +1,14 @@
 import type { ChatMessage } from '../types';
 
+// btoa 只接受 Latin-1，中文会抛 InvalidCharacterError；这里按 UTF-8 编码后再转 base64。
+// 前端 evidence.ts 用 atob + TextDecoder('utf-8') 解码，两端一致。
+function b64utf8(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let bin = '';
+  bytes.forEach(b => { bin += String.fromCharCode(b); });
+  return btoa(bin);
+}
+
 export function getMockSopResponse(query: string, files: Array<{ type: string; url: string }> = []): {
   answer: string;
   retrieverResources?: ChatMessage['retrieverResources'];
@@ -18,9 +27,19 @@ export function getMockSopResponse(query: string, files: Array<{ type: string; u
 
   // 2. S1 Pro 产品消歧 (功能点三：问清与消歧)
   if (q.includes('s1 pro') || q.includes('s1pro')) {
+    const disambigEvidence = {
+      schema_version: 1,
+      mock: true,
+      // 消歧追问也走「快速模拟对话」小气泡：气泡内容就是用户要回的那几个字
+      options: [
+        { label: '扫地机器人', value: '扫地机器人' },
+        { label: '吸奶器', value: '吸奶器' },
+      ],
+    };
     return {
       answer:
-        '收到您的反馈。由于 "S1 Pro" 属于多品类共用型号，请确认您正在排查的具体设备：\n__PRODUCT_DISAMBIG__{"candidates":[{"id":"c1","name":"eufy 穿戴式吸奶器 S1 Pro","category":"母婴健康"},{"id":"c2","name":"eufy 全能洗地扫地机器人 S1 Pro","category":"智能清洁"}]}__PRODUCT_DISAMBIG_END__',
+        '收到您的反馈。由于 "S1 Pro" 属于多品类共用型号，请确认您正在排查的具体设备：请回复「扫地机器人」或「吸奶器」。\n' +
+        `__EVIDENCE_V1__${b64utf8(JSON.stringify(disambigEvidence))}__EVIDENCE_END__`,
       retrieverResources: [
         {
           document_name: 'Anker/eufy 品类命名索引',
@@ -73,6 +92,56 @@ export function getMockSopResponse(query: string, files: Array<{ type: string; u
     };
   }
 
+  // 5.5 排障推进（离线演示专用）：让「快速模拟对话」的气泡能真正往前走。
+  //     无状态兜底若不区分上一问的回答，会把同一个问题反复抛出，看起来像「卡住」。
+  const MOCK_STEPS: Record<string, { answer: string; node: string; status: string; options?: Array<{ label: string; value: string }> }> = {
+    '仍不行': {
+      answer: '好的，换过线材和充电头后仍然充不进电。最后确认一步：充电时屏幕有反应吗？',
+      node: 'display',
+      status: 'waiting_user',
+      options: [
+        { label: '屏幕黑屏', value: '黑屏' },
+        { label: '屏幕有显示', value: '有显示' },
+        { label: '屏幕显示 UVP', value: 'UVP' },
+      ],
+    },
+    '黑屏': {
+      answer: '交叉排查后仍无法充电，属于硬件问题，需要售后核实；我们不会在缺少依据时承诺换新。',
+      node: 'hardware',
+      status: 'needs_review',
+    },
+    '有显示': {
+      answer: '屏幕有显示说明协议已握手但功率偏低。建议换用 100W 以上 PD 3.1 线材后复测；仍然不行请联系售后核实。',
+      node: 'slow',
+      status: 'resolved',
+    },
+    'UVP': {
+      answer: 'UVP 是欠压保护提示。建议更换线材与充电头后复测；若仍然出现，请交给售后核实硬件。',
+      node: 'uvp',
+      status: 'needs_review',
+    },
+    '恢复了': {
+      answer: '好的，问题已经恢复。如果再次出现，随时联系我们。',
+      node: 'resolved',
+      status: 'resolved',
+    },
+  };
+  const step = MOCK_STEPS[query.replace(/[\s。.!！?？]/g, '')];
+  if (step) {
+    const stepEvidence: Record<string, unknown> = {
+      schema_version: 1,
+      mock: true,
+      product: 'Anker737',
+      node: step.node,
+      tasks: [{ kind: 'troubleshooting', status: step.status }],
+    };
+    if (step.options) stepEvidence.options = step.options;
+    return {
+      answer: step.answer + `\n__EVIDENCE_V1__${b64utf8(JSON.stringify(stepEvidence))}__EVIDENCE_END__`,
+      retrieverResources: [],
+    };
+  }
+
   // 6. 默认排障与政策问答 (有限状态排障与出处锁)
   const evidenceState = {
     schema_version: 1,
@@ -80,6 +149,11 @@ export function getMockSopResponse(query: string, files: Array<{ type: string; u
     product: q.includes('耳机') || q.includes('soundcore') ? 'Soundcore' : 'Anker 737',
     node: 'cable',
     tasks: [{ kind: 'troubleshooting', status: 'waiting_user' }, { kind: 'warranty', status: 'checked' }],
+    // 离线兜底也带本轮追问选项，供本地/断网演示「快速模拟对话」
+    options: [
+      { label: '换了也不行', value: '仍不行' },
+      { label: '换完就好了', value: '恢复了' },
+    ],
     citations: [
       {
         chunk_id: 'faq_anker737_f1',
@@ -89,7 +163,7 @@ export function getMockSopResponse(query: string, files: Array<{ type: string; u
     ],
   };
 
-  const b64Evidence = btoa(JSON.stringify(evidenceState));
+  const b64Evidence = b64utf8(JSON.stringify(evidenceState));
 
   return {
     answer:

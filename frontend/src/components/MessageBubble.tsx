@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { ChatMessage, OptionChip, UserInsight } from '../types';
+import type { ChatMessage, UserInsight } from '../types';
 import {
   IconUser,
   IconAnkerLogo,
@@ -7,44 +7,21 @@ import {
   IconExternalLink,
   IconSparkles,
 } from './SvgIcons';
-import ProductDisambigCard, { type ProductCandidate } from './ProductDisambigCard';
 import UnderstandingBubble from './UnderstandingBubble';
-import OptionChips from './OptionChips';
 import { safeSource } from '../utils/evidence';
 
 interface Props {
   message: ChatMessage;
-  onConfirmProduct: (id: string, name: string) => void;
   isStreaming?: boolean;
   /** 仅最后一条用户消息带：情绪与理解辅助（B2） */
   insight?: UserInsight;
-  /** 仅最后一条 AI 消息带：可点选项芯片（B2） */
-  options?: OptionChip[];
-  onOptionSelect?: (value: string) => void;
 }
 
-export default function MessageBubble({ message, onConfirmProduct, isStreaming, insight, options, onOptionSelect }: Props) {
+export default function MessageBubble({ message, isStreaming, insight }: Props) {
   const isUser = message.role === 'user';
   const rawContent = message.content || '';
 
-  // 1. 提取消歧 marker: __PRODUCT_DISAMBIG__{...}__PRODUCT_DISAMBIG_END__
-  const disambigMatch = rawContent.match(/__PRODUCT_DISAMBIG__([\s\S]*?)__PRODUCT_DISAMBIG_END__/);
-  const disambigData = useMemo<{ candidates: ProductCandidate[] } | null>(() => {
-    if (!disambigMatch) return null;
-    try {
-      const parsed = JSON.parse(disambigMatch[1].trim());
-      if (Array.isArray(parsed.candidates)) return parsed;
-    } catch {
-      try {
-        const sanitized = disambigMatch[1].trim().replace(/'/g, '"');
-        const parsed = JSON.parse(sanitized);
-        if (Array.isArray(parsed.candidates)) return parsed;
-      } catch {}
-    }
-    return null;
-  }, [disambigMatch]);
-
-  // 2. 清理正文中的系统元数据标记
+  // 清理正文中的系统元数据标记
   const cleanContent = useMemo(() => {
     return rawContent
       .replace(/__EVIDENCE_V1__[A-Za-z0-9+/=]+__EVIDENCE_END__/g, '')
@@ -102,15 +79,6 @@ export default function MessageBubble({ message, onConfirmProduct, isStreaming, 
             </div>
           )}
 
-          {/* 产品型号消歧卡片 */}
-          {!isUser && disambigData && (
-            <ProductDisambigCard
-              candidates={disambigData.candidates}
-              onConfirm={onConfirmProduct}
-              disabled={isStreaming}
-            />
-          )}
-
           {/* 出处锁：政策条款引用溯源抽屉 */}
           {!isUser && citations.length > 0 && (
             <details className="citation-accordion">
@@ -153,9 +121,6 @@ export default function MessageBubble({ message, onConfirmProduct, isStreaming, 
         </div>
 
         {isUser && insight && <UnderstandingBubble {...insight} />}
-        {!isUser && options && options.length > 0 && onOptionSelect && (
-          <OptionChips options={options} onSelect={onOptionSelect} disabled={isStreaming} />
-        )}
       </div>
     </article>
   );

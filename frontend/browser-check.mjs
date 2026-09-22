@@ -16,6 +16,7 @@ page.on('requestfailed', r => console.log('Failed request', r.url(), r.failure()
 const requests = [];
 const actionRequests = [];
 let actionFail = false;
+let forceOffline = false;
 let respondState = {
   schema_version: 1,
   mock: true,
@@ -27,6 +28,10 @@ let respondState = {
 };
 await page.setRequestInterception(true);
 page.on('request', async r => {
+  if (forceOffline && r.url().includes('/dify-api/chat-messages')) {
+    // 模拟服务不可达，走离线兜底回答
+    return r.abort();
+  }
   if (r.url().includes('/dify-api/chat-messages')) {
     const body = JSON.parse(r.postData());
     requests.push(body);
@@ -157,6 +162,14 @@ try {
 
   const b1Text = await page.evaluate(() => document.body.innerText);
   assert(b1Text.includes('已确认换线无效'), '会话摘要未渲染');
+  // 触发后，对应防线卡片点亮 + 上抬（translateY 不为 0）
+  assert(await page.evaluate(() => document.querySelectorAll('.defense-card.is-active').length >= 1), '触发后防线卡片未点亮');
+  assert(await page.evaluate(() => {
+    const el = document.querySelector('.defense-card.is-active');
+    if (!el) return false;
+    const t = getComputedStyle(el).transform;
+    return t !== 'none' && !/matrix\(1,\s*0,\s*0,\s*1,\s*0,\s*0\)/.test(t);
+  }), '触发后防线卡片未上抬');
   for (const oldTab of ['决策与路由', '看图跳级', '情绪监测', '出处检索']) {
     assert(!b1Text.includes(oldTab), `旧 tab 未移除：${oldTab}`);
   }
@@ -232,6 +245,15 @@ try {
 
   const chipCount = await page.evaluate(() => document.querySelectorAll('.option-chip').length);
   assert(chipCount === 2, `选项芯片数量应为 2，实际 ${chipCount}`);
+
+  // 快速模拟对话：位于输入框上方
+  assert(await page.$('.quick-dialog'), '未出现「快速模拟对话」块');
+  assert(await page.evaluate(() => {
+    const q = document.querySelector('.quick-dialog');
+    const t = document.querySelector('textarea');
+    if (!q || !t) return false;
+    return q.getBoundingClientRect().bottom <= t.getBoundingClientRect().top + 1;
+  }), '「快速模拟对话」未出现在输入框上方');
 
   await waitIdle();
   const beforeClick = requests.length;
@@ -345,6 +367,44 @@ try {
   assert((await page.evaluate(() => document.body.innerText)).includes('提交失败，请重试'), '失败未给出重试提示');
   actionFail = false;
 
+  // ===== 离线兜底：S1 Pro 消歧用「快速模拟对话」小气泡，不再用卡片 =====
+  const waitForText = async (t, tries = 60) => {
+    for (let i = 0; i < tries; i++) {
+      if (await page.evaluate(x => document.body.innerText.includes(x), t)) return true;
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return false;
+  };
+  forceOffline = true;
+  await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.type('textarea', '我的s1pro不吸了');
+  await page.keyboard.press('Enter');
+  assert(await waitForText('扫地机器人'), '消歧追问未出现快捷回复气泡');
+  assert(await page.evaluate(() =>
+    document.querySelectorAll('.product-disambig-container, .disambig-card-btn').length === 0), '消歧仍以卡片形式展示');
+  const disambigChips = await page.evaluate(() => [...document.querySelectorAll('.option-chip')].map(b => b.innerText.trim()));
+  assert(disambigChips.includes('扫地机器人') && disambigChips.includes('吸奶器'),
+    `消歧气泡内容不正确：${disambigChips.join('/')}`);
+  // 点气泡就等于回这几个字
+  await page.click('.option-chip');
+  assert(await waitForText('请您先确认'), '点击消歧气泡后未得到新的回复');
+  assert(await page.evaluate(() => ![...document.querySelectorAll('.option-chip')].some(b => b.innerText.trim() === '扫地机器人')),
+    '回复后仍残留消歧气泡');
+
+  // 排障推进：点「换了也不行」必须进入下一问，不能原地重复（防「卡对话」）
+  await page.$eval('textarea', el => { el.value = ''; el.dispatchEvent(new Event('input', { bubbles: true })); });
+  await page.type('textarea', '我的737充不进电');
+  await page.keyboard.press('Enter');
+  assert(await waitForText('换了也不行'), '未出现排障快捷气泡');
+  await page.click('.option-chip');
+  assert(await waitForText('屏幕有反应吗'), '点击「换了也不行」后未推进到下一问（卡住）');
+  const stepChips = await page.evaluate(() => [...document.querySelectorAll('.option-chip')].map(b => b.innerText.trim()));
+  assert(stepChips.includes('屏幕黑屏'), `下一问的气泡未更新：${stepChips.join('/')}`);
+  await page.click('.option-chip');
+  assert(await waitForText('需要售后核实'), '点击「屏幕黑屏」后未给出结论');
+  assert(await page.evaluate(() => document.querySelector('.option-chips') === null), '给出结论后仍残留追问气泡');
+  forceOffline = false;
+
   // ===== B4：解释性文案清理与状态词 =====
   const cleanedText = await page.evaluate(() => document.body.innerText);
   for (const banned of [
@@ -361,7 +421,7 @@ try {
 
   // 权限锁：提出退款诉求后点亮
   await ask('你直接给我退款', undefined);
-  assert((await page.evaluate(() => document.body.innerText)).includes('已阻断越权请求'), '退款诉求未点亮权限锁');
+  assert((await page.evaluate(() => document.body.innerText)).includes('已阻断'), '退款诉求未点亮权限锁');
 
   assert.equal(errors.length, 0, errors.join('\n'));
 
